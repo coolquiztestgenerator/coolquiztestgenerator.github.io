@@ -124,6 +124,18 @@
           <div style="margin-bottom:8px">
             <div class="row" style="gap:8px;margin-bottom:6px">
               <input type="text" id="aiTopic" placeholder="Enter a topic (e.g., 'Basic algebra', 'World War 2')" style="flex:1">
+            </div>
+            <div class="row" style="gap:8px;margin-bottom:6px">
+              <div class="small">
+                <label style="display:block;margin-bottom:4px">Number of MCQs:</label>
+                <input type="number" id="mcqCount" min="0" value="3" style="width:100%">
+              </div>
+              <div class="small">
+                <label style="display:block;margin-bottom:4px">Number of FRQs:</label>
+                <input type="number" id="frqCount" min="0" value="2" style="width:100%">
+              </div>
+            </div>
+            <div style="margin-top:8px">
               <button id="showPrompt" class="accent" style="white-space:nowrap">Get Prompt for an AI</button>
             </div>
             <div id="promptSection" style="display:none;margin:8px 0;padding:8px;background:var(--card);border:1px solid var(--border);border-radius:6px">
@@ -213,6 +225,8 @@
     const addFrq = document.getElementById('addFrq');
     const clearAll = document.getElementById('clearAll');
     const aiTopic = document.getElementById('aiTopic');
+    const mcqCount = document.getElementById('mcqCount');
+    const frqCount = document.getElementById('frqCount');
     const showPrompt = document.getElementById('showPrompt');
     const promptSection = document.getElementById('promptSection');
     const promptText = document.getElementById('promptText');
@@ -739,6 +753,9 @@
     }
 
     function generatePrompt(topic, full) {
+      const mcqs = parseInt(mcqCount.value) || 0;
+      const frqs = parseInt(frqCount.value) || 0;
+      
       return `Create a quiz about: ${topic}
 
 You must respond with ONLY a JSON object in exactly this format:
@@ -758,6 +775,10 @@ You must respond with ONLY a JSON object in exactly this format:
     }
   ]
 }
+
+Required number of questions:
+- Multiple Choice Questions (MCQs): ${mcqs}
+- Free Response Questions (FRQs): ${frqs}
 
 Requirements:
 1. Generate exactly the amount the person wants: no more, and especially no less.
