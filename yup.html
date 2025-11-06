@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Quiz Generator</title>
+  <style>
+    :root{--bg:#f5f7fb;--card:#fff;--text:#111;--muted:#555;--accent:#2563eb;--border:rgba(0,0,0,0.04)}
+    .dark{--bg:#0b1220;--card:#0f1724;--text:#e6eef8;--muted:#9fb1d1;--accent:#60a5fa;--border:rgba(255,255,255,0.03)}
+    html,body{height:100%;margin:0;font-family:Inter,Segoe UI,system-ui,Arial,sans-serif;background:var(--bg);color:var(--text)}
+    .app{max-width:1100px;margin:28px auto;padding:20px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    h1{margin:0;font-size:1.4rem}
+    .controls{display:flex;gap:8px;align-items:center}
+    button{cursor:pointer;color:var(--text)}
+    .panel{display:grid;grid-template-columns:1fr 420px;gap:18px;margin-top:18px}
+    .card{background:var(--card);padding:14px;border-radius:10px;box-shadow:0 6px 18px rgba(2,6,23,0.06)}
+    .q-list{max-height:560px;overflow:auto}
+    .q-item{border-radius:8px;padding:10px;margin-bottom:10px;background:linear-gradient(180deg,rgba(0,0,0,0.02),transparent)}
+    label{display:block;font-size:0.9rem;margin:8px 0 6px}
+    input[type=text], textarea, select{width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text)}
+    input::placeholder, textarea::placeholder{color:var(--muted);opacity:0.85}
+    .row{display:flex;gap:8px}
+    .small{width:48%}
+    .muted{color:var(--muted);font-size:0.9rem}
+    .option{display:flex;gap:8px;align-items:center}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .topbar{display:flex;gap:8px;align-items:center}
+    .accent{background:var(--accent);color:white;border:none;padding:8px 12px;border-radius:8px}
+    .secondary{background:transparent;border:1px solid var(--border);padding:7px 10px;border-radius:8px}
+    footer{margin-top:18px;color:var(--muted);font-size:0.9rem}
+    @media(max-width:900px){.panel{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <header>
+      <div>
+        <h1>Quiz Generator</h1>
+        <div class="muted">Create MCQs and FRQs, then download a standalone quiz HTML file.</div>
+      </div>
+      <div class="controls">
+        <label class="topbar"><input type="checkbox" id="darkToggle"> Dark</label>
+        <button id="downloadBtn" class="accent">Generate & Download Quiz</button>
+      </div>
+    </header>
+
+    <div class="panel">
+      <section class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <h3 style="margin:0">Questions</h3>
+          <div class="muted">Total: <span id="totalCount">0</span></div>
+        </div>
+
+        <div style="margin-top:12px">
+          <div style="margin-bottom:8px">
+            <div class="row" style="gap:8px;margin-bottom:6px">
+              <input type="text" id="aiTopic" placeholder="Enter a topic (e.g., 'Basic algebra', 'World War 2')" style="flex:1">
+              <button id="showPrompt" class="accent" style="white-space:nowrap">Get Prompt for an AI</button>
+            </div>
+            <div id="promptSection" style="display:none;margin:8px 0;padding:8px;background:var(--card);border:1px solid var(--border);border-radius:6px">
+              <div style="margin-bottom:8px">Copy this prompt to an AI of your choosing:</div>
+              <textarea id="promptText" rows="6" style="width:100%;margin-bottom:8px;font-family:monospace;font-size:0.9em"></textarea>
+              <div class="row" style="gap:8px">
+                <button id="copyPrompt" class="secondary">Copy Prompt</button>
+                <button id="hidePrompt" class="secondary">Hide</button>
+              </div>
+            </div>
+            <div class="row" style="gap:8px">
+              <textarea id="jsonInput" placeholder="Paste the JSON response from your AI here to import the quiz..." rows="4" style="flex:1"></textarea>
+              <button id="importJson" class="secondary" style="white-space:nowrap">Import</button>
+            </div>
+            <label style="display:block;margin-top:6px"><input type="checkbox" id="aiFull" checked> Generate full quiz (title, questions, FRQ examples)</label>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button id="addMcq" class="secondary">+ Add MCQ</button>
+            <button id="addFrq" class="secondary">+ Add FRQ</button>
+            <button id="clearAll" class="secondary">Clear</button>
+          </div>
+        </div>
+
+        <div id="qList" class="q-list" style="margin-top:12px"></div>
+      </section>
+
+      <aside class="card">
+        <h3 style="margin-top:0">Editor</h3>
+        <div id="editorEmpty" class="muted">Select or add a question to edit it here.</div>
+        <div id="editor" style="display:none">
+          <label>Question text</label>
+          <input id="qText" type="text" placeholder="Enter question text" />
+
+          <div id="mcqFields" style="margin-top:8px;display:none">
+            <label>Options</label>
+            <div id="options"></div>
+            <div style="margin-top:6px"><button id="addOption" class="secondary">+ Option</button></div>
+            <label style="margin-top:8px">Correct option</label>
+            <select id="correctIndex"></select>
+          </div>
+
+          <div id="frqFields" style="margin-top:8px;display:none">
+            <label>Example answer (will be shown when viewing answers)</label>
+            <textarea id="frqExample" rows="6" placeholder="Write a model/example answer"></textarea>
+          </div>
+
+          <div class="actions">
+            <button id="saveBtn" class="accent">Save</button>
+            <button id="deleteBtn" class="secondary">Delete</button>
+          </div>
+        </div>
+
+        <div id="generalSettings" style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
+          <h4 style="margin:0 0 8px 0">General settings</h4>
+          <label style="display:block;margin-bottom:8px">Quiz title
+            <input id="quizTitle" type="text" placeholder="Quiz title" style="margin-top:6px" />
+          </label>
+          <label style="display:block;margin-bottom:6px"><input type="checkbox" id="shuffleQs"> Shuffle questions</label>
+          <label style="display:block;margin-bottom:6px"><input type="checkbox" id="shuffleChoices"> Shuffle MCQ choices</label>
+          <label style="display:block;margin-bottom:6px"><input type="checkbox" id="includeFrqExamples" checked> Include FRQ examples in download</label>
+        </div>
+
+        <footer>
+          <strong>Notes:</strong>
+          <ul style="margin:6px 0 0;padding-left:18px">
+            <li>MCQs are auto-graded; FRQs display example answers but are not auto-graded.</li>
+            <li>Generated quiz includes its own dark mode and answer-viewing tools.</li>
+          </ul>
+        </footer>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    // Helpers
+    function escapeHtml(s){ 
+      return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); 
+    }
+
+    // State
+    const state = { questions: [], selected: -1, dark: false };
+
+    // Elements
+    const qList = document.getElementById('qList');
+    const totalCount = document.getElementById('totalCount');
+    const addMcq = document.getElementById('addMcq');
+    const addFrq = document.getElementById('addFrq');
+    const clearAll = document.getElementById('clearAll');
+    const aiTopic = document.getElementById('aiTopic');
+    const showPrompt = document.getElementById('showPrompt');
+    const promptSection = document.getElementById('promptSection');
+    const promptText = document.getElementById('promptText');
+    const copyPrompt = document.getElementById('copyPrompt');
+    const hidePrompt = document.getElementById('hidePrompt');
+    const jsonInput = document.getElementById('jsonInput');
+    const importJson = document.getElementById('importJson');
+    const aiFull = document.getElementById('aiFull');
+    const editor = document.getElementById('editor');
+    const editorEmpty = document.getElementById('editorEmpty');
+    const qText = document.getElementById('qText');
+    const mcqFields = document.getElementById('mcqFields');
+    const frqFields = document.getElementById('frqFields');
+    const optionsDiv = document.getElementById('options');
+    const addOption = document.getElementById('addOption');
+    const correctIndex = document.getElementById('correctIndex');
+    const frqExample = document.getElementById('frqExample');
+    const saveBtn = document.getElementById('saveBtn');
+    const deleteBtn = document.getElementById('deleteBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const darkToggle = document.getElementById('darkToggle');
+    const quizTitle = document.getElementById('quizTitle');
+    const shuffleQs = document.getElementById('shuffleQs');
+    const shuffleChoices = document.getElementById('shuffleChoices');
+    const includeFrqExamples = document.getElementById('includeFrqExamples');
+
+    function renderList(){
+      qList.innerHTML = '';
+      state.questions.forEach((q,i)=>{
+        const el = document.createElement('div'); el.className='q-item';
+        el.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:flex-start"><div style="flex:1"><strong>${i+1}. ${escapeHtml(q.text || '(no text)')}</strong><div class=\"muted\">${q.type.toUpperCase()}${q.type==='mcq'?` — ${q.choices.length} options`:''}</div></div><div style=\"margin-left:8px\"><button class=\"secondary\" data-i=\"${i}\">Edit</button></div></div>`;
+        qList.appendChild(el);
+        el.querySelector('button').onclick = ()=>{ selectQuestion(i); };
+      });
+      totalCount.textContent = state.questions.length;
+    }
+
+    function selectQuestion(i){
+      state.selected = i;
+      const q = state.questions[i];
+      editorEmpty.style.display='none'; editor.style.display='block';
+      qText.value = q.text || '';
+      if(q.type==='mcq'){
+        mcqFields.style.display='block'; frqFields.style.display='none';
+        renderOptions(q);
+      } else {
+        mcqFields.style.display='none'; frqFields.style.display='block';
+        frqExample.value = q.example || '';
+      }
+      rebuildCorrectSelect(q);
+    }
+
+    function renderOptions(q){
+      optionsDiv.innerHTML='';
+      q.choices.forEach((opt, idx)=>{
+        const row = document.createElement('div'); row.className='option';
+        const inp = document.createElement('input'); inp.type='text'; inp.value=opt; inp.style.flex='1';
+        inp.oninput = ()=>{ q.choices[idx] = inp.value; rebuildCorrectSelect(q); };
+        const del = document.createElement('button'); del.textContent='✕'; del.className='secondary'; del.onclick=()=>{ q.choices.splice(idx,1); renderOptions(q); rebuildCorrectSelect(q); };
+        row.appendChild(inp); row.appendChild(del); optionsDiv.appendChild(row);
+      });
+    }
+
+    // Show prompt button handler
+    showPrompt.onclick = () => {
+      const topic = aiTopic.value.trim();
+      if(!topic) return alert('Please enter a topic first');
+      
+      promptText.value = generatePrompt(topic, aiFull.checked);
+      promptSection.style.display = 'block';
+    };
+
+    function buildQuizHTML(questions, preferDark=false, options={}){
+      // prepare options
+      const title = (options && options.title) ? String(options.title) : 'Quiz';
+      const opts = Object.assign({shuffleQuestions:false, shuffleChoices:false, includeFrqExamples:true}, options || {});
+
+      // deep copy questions
+      const qcopy = JSON.parse(JSON.stringify(questions || []));
+
+      // optionally shuffle questions
+      if(opts.shuffleQuestions){ shuffleArray(qcopy); }
+
+      // optionally shuffle choices and remap correctIndex
+      if(opts.shuffleChoices){
+        qcopy.forEach(q=>{
+          if(q && q.type === 'mcq' && Array.isArray(q.choices)){
+            const orig = q.choices.slice();
+            const indices = orig.map((_,i)=>i);
+            shuffleArray(indices);
+            const newChoices = indices.map(i=>orig[i]);
+            const origCorrect = (typeof q.correctIndex === 'number') ? q.correctIndex : 0;
+            const newCorrect = indices.indexOf(origCorrect);
+            q.choices = newChoices;
+            q.correctIndex = newCorrect >= 0 ? newCorrect : 0;
+          }
+        });
+      }
+
+      // remove FRQ examples if desired
+      if(!opts.includeFrqExamples){
+        qcopy.forEach(q=>{ if(q && q.type==='frq') delete q.example; });
+      }
+
+      const data = JSON.stringify(qcopy).replace(/</g,'\\u003c');
+
+      return `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>${escapeHtml(title)}</title>
+<style>
+  :root{--bg:#f7fafc;--card:#fff;--text:#0b1220;--muted:#475569;--accent:#0655d1;--border:rgba(0,0,0,0.04);--success:#dcfce7;--error:#fee2e2}
+  .dark{--bg:#071126;--card:#071833;--text:#e6eef8;--muted:#9fb1d1;--accent:#60a5fa;--border:rgba(255,255,255,0.03);--success:rgba(34,197,94,0.1);--error:rgba(239,68,68,0.1)}
+  body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text);padding:18px}
+  input[type=text], textarea, select{border:1px solid var(--border);background:transparent;color:var(--text);padding:6px;border-radius:6px}
+  input::placeholder, textarea::placeholder{color:var(--muted);opacity:0.85}
+  .wrap{max-width:900px;margin:0 auto}
+  .card{background:var(--card);padding:14px;border-radius:10px;box-shadow:0 8px 28px rgba(2,6,23,0.06)}
+  .q{margin-bottom:12px;padding:10px;border-radius:8px}
+  .muted{color:var(--muted)}
+  .accent{background:var(--accent);color:white;border:none;padding:8px 12px;border-radius:8px}
+  .secondary{background:transparent;border:1px solid var(--border);padding:7px 10px;border-radius:8px;color:var(--text)}
+  .correct{background:var(--success)}
+  .wrong{background:var(--error)}
+  .example{margin-top:8px;padding:8px;background:linear-gradient(90deg,rgba(0,0,0,0.02),transparent);border-radius:6px}
+  textarea{width:100%;min-height:80px}
+  .top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  @media(max-width:600px){.top{flex-direction:column;align-items:flex-start}}
+</style>
+</head>
+<body class="${preferDark? 'dark':''}">
+  <div class="wrap">
+    <div class="top" style="margin-bottom:10px">
+      <h2 style="margin:0">${escapeHtml(title)}</h2>
+      <div>
+        <label><input id="darkToggle" type="checkbox"> Dark</label>
+        <button id="viewAnswers" class="secondary">View Answers</button>
+      </div>
+    </div>
+
+    <div id="quiz" class="card"></div>
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button id="submitBtn" class="accent">Submit</button>
+      <div id="score" class="muted"></div>
+    </div>
+  </div>
+
+  <script>
+    const questions = ${data};
+    const quiz = document.getElementById('quiz');
+    const scoreDiv = document.getElementById('score');
+    const submitBtn = document.getElementById('submitBtn');
+    const viewBtn = document.getElementById('viewAnswers');
+    const darkToggle = document.getElementById('darkToggle');
+
+    // Render
+    function render(){
+      quiz.innerHTML='';
+      questions.forEach((q, idx)=>{
+        const el = document.createElement('div'); el.className='q'; el.dataset.idx=idx;
+        const title = document.createElement('div'); title.innerHTML = '<strong>Q' + (idx+1) + '.</strong> ' + escapeHtml(q.text);
+        el.appendChild(title);
+        if(q.type==='mcq'){
+          const list = document.createElement('div'); list.style.marginTop='8px';
+          q.choices.forEach((opt, i)=>{
+            const id = 'q' + idx + '_opt' + i;
+            const row = document.createElement('div');
+            row.innerHTML = '<label style="display:flex;gap:8px;align-items:center"><input type="radio" name="q' + idx + '" value="' + i + '"> <span>' + String.fromCharCode(65+i) + '. ' + escapeHtml(opt) + '</span></label>';
+            list.appendChild(row);
+          });
+          el.appendChild(list);
+        } else {
+          const ta = document.createElement('textarea'); ta.placeholder = 'Write your answer here.'; ta.dataset.frqid = idx; ta.style.marginTop='8px'; el.appendChild(ta);
+          const hint = document.createElement('div'); hint.className='muted'; hint.style.marginTop='6px'; hint.textContent = 'An example answer is available when viewing answers.'; el.appendChild(hint);
+        }
+        quiz.appendChild(el);
+      });
+    }
+
+    function grade(){
+      let correct=0, totalMCQ=0;
+      questions.forEach((q, idx)=>{
+        if(q.type!=='mcq') return;
+        totalMCQ++;
+        const sel = document.querySelector('input[name="q' + idx + '"]:checked');
+        const parent = document.querySelector('.q[data-idx="' + idx + '"]');
+        // clear previous
+        parent.classList.remove('correct','wrong');
+        if(sel){
+          const val = parseInt(sel.value,10);
+          if(val === (q.correctIndex||0)) { correct++; parent.classList.add('correct'); }
+          else parent.classList.add('wrong');
+        } else {
+          parent.classList.add('wrong');
+        }
+      });
+      return {correct,totalMCQ};
+    }
+
+    submitBtn.onclick = ()=>{
+      const res = grade();
+      scoreDiv.textContent = 'Score: ' + res.correct + ' / ' + res.totalMCQ + ' (MCQs). FRQs are shown as examples and are not auto-graded.';
+      // disable inputs
+      document.querySelectorAll('input[type=radio], textarea').forEach(el=>el.disabled=true);
+    };
+
+    viewBtn.onclick = ()=>{
+      // show answers and examples
+      questions.forEach((q, idx)=>{
+        const el = document.querySelector('.q[data-idx="' + idx + '"]');
+        if(q.type==='mcq'){
+          // highlight correct choice
+          const radios = el.querySelectorAll('input[type=radio]');
+          radios.forEach((r,i)=>{
+            const label = r.parentElement.querySelector('span');
+            if(i=== (q.correctIndex||0)) label.style.fontWeight='700';
+          });
+        } else {
+          const ex = document.createElement('div'); ex.className='example'; ex.innerHTML = '<strong>Example:</strong> ' + escapeHtml(q.example||'(no example)');
+          if(!el.querySelector('.example')) el.appendChild(ex);
+        }
+      });
+      // Also grade MCQs if not yet
+      const res = grade();
+      scoreDiv.textContent = 'Score: ' + res.correct + ' / ' + res.totalMCQ + ' (MCQs). FRQs are not graded here.';
+    };
+
+    // Dark toggle
+    darkToggle.onchange = ()=>{ document.body.classList.toggle('dark', darkToggle.checked); };
+
+    render();
+  <\/script>
+</body>
+</html>`;
+    }
+    // Button handlers
+    addMcq.onclick = () => {
+      state.questions.push({ type: 'mcq', text: '', choices: ['Option A', 'Option B'], correctIndex: 0 });
+      renderList();
+      selectQuestion(state.questions.length - 1);
+    };
+
+    addFrq.onclick = () => {
+      state.questions.push({ type: 'frq', text: '', example: '' });
+      renderList();
+      selectQuestion(state.questions.length - 1);
+    };
+
+    clearAll.onclick = () => {
+      if(confirm('Clear all questions?')){
+        state.questions = [];
+        state.selected = -1;
+        renderList();
+        editor.style.display = 'none';
+        editorEmpty.style.display = 'block';
+      }
+    };
+
+    // Save changes from editor
+    saveBtn.onclick = () => {
+      const q = state.questions[state.selected];
+      if(q){
+        q.text = qText.value;
+        if(q.type === 'frq'){
+          q.example = frqExample.value;
+        }
+        renderList();
+      }
+    };
+
+    // Delete current question
+    deleteBtn.onclick = () => {
+      if(state.selected >= 0){
+        state.questions.splice(state.selected, 1);
+        state.selected = -1;
+        renderList();
+        editor.style.display = 'none';
+        editorEmpty.style.display = 'block';
+      }
+    };
+
+    // Add option to MCQ
+    addOption.onclick = () => {
+      const q = state.questions[state.selected];
+      if(q && q.type === 'mcq'){
+        q.choices.push('New option');
+        renderOptions(q);
+        rebuildCorrectSelect(q);
+      }
+    };
+
+    // Download quiz
+    downloadBtn.onclick = () => {
+      if(!state.questions.length) return alert('Add some questions first!');
+      
+      const html = buildQuizHTML(state.questions, darkToggle.checked, {
+        title: quizTitle.value || 'Quiz',
+        shuffleQuestions: shuffleQs.checked,
+        shuffleChoices: shuffleChoices.checked,
+        includeFrqExamples: includeFrqExamples.checked
+      });
+
+      const blob = new Blob([html], { type: 'text/html' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'quiz.html';
+      a.click();
+    };
+
+    // Dark mode toggle
+    darkToggle.onchange = () => document.body.classList.toggle('dark', darkToggle.checked);
+    
+    // Helper for MCQ correct answer dropdown
+    function rebuildCorrectSelect(q){
+      if(!q || q.type !== 'mcq') return;
+      correctIndex.innerHTML = '';
+      q.choices.forEach((opt, i) => {
+        const el = document.createElement('option');
+        el.value = i;
+        el.textContent = String.fromCharCode(65 + i) + '. ' + opt;
+        if(i === q.correctIndex) el.selected = true;
+        correctIndex.appendChild(el);
+      });
+      correctIndex.onchange = () => q.correctIndex = parseInt(correctIndex.value, 10);
+    }
+
+    // Helper for shuffling arrays
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+    function generatePrompt(topic, full) {
+      return `Create a quiz about: ${topic}
+
+You must respond with ONLY a JSON object in exactly this format:
+{
+  "title": "Quiz title here",
+  "questions": [
+    {
+      "type": "mcq",
+      "text": "Your multiple choice question",
+      "choices": ["First option", "Second option", "Third option", "Fourth option"],
+      "correctIndex": 0
+    },
+    {
+      "type": "frq",
+      "text": "Your free response question",
+      "example": "Example answer here"
+    }
+  ]
+}
+
+Requirements:
+1. Generate exactly 3 questions (2 MCQs and 1 FRQ)
+2. Make questions clear and educational
+3. For MCQs, ensure one answer is clearly correct
+4. ${full ? 'Include detailed example answers for FRQs' : 'Keep example answers brief'}
+5. Return ONLY the JSON object - no other text
+
+Remember: Your entire response must be a valid JSON object that can be parsed with JSON.parse().`;
+    }
+
+    // Show prompt button handler
+    showPrompt.onclick = () => {
+      const topic = aiTopic.value.trim();
+      if(!topic) return alert('Please enter a topic first');
+      
+      promptText.value = generatePrompt(topic, aiFull.checked);
+      promptSection.style.display = 'block';
+    };
+
+    // Copy prompt button
+    copyPrompt.onclick = async () => {
+      await navigator.clipboard.writeText(promptText.value);
+      const oldText = copyPrompt.textContent;
+      copyPrompt.textContent = 'Copied!';
+      setTimeout(() => copyPrompt.textContent = oldText, 1500);
+    };
+
+    // Hide prompt section
+    hidePrompt.onclick = () => {
+      promptSection.style.display = 'none';
+    };
+
+    // Import JSON button
+    importJson.onclick = () => {
+      try {
+        const json = jsonInput.value.trim();
+        if(!json) return alert('Please paste the JSON response first');
+
+        const data = JSON.parse(json);
+        
+        // Validate structure
+        if(!data.questions || !Array.isArray(data.questions)) {
+          throw new Error('Invalid quiz format - missing questions array');
+        }
+
+        // Set title if provided
+        if(data.title) {
+          quizTitle.value = data.title;
+        }
+
+        // Import questions
+        data.questions.forEach(q => {
+          if(q.type === 'mcq') {
+            state.questions.push({
+              type: 'mcq',
+              text: q.text || '(no text)',
+              choices: Array.isArray(q.choices) ? q.choices : ['Option A','Option B','Option C','Option D'],
+              correctIndex: typeof q.correctIndex === 'number' ? q.correctIndex : 0
+            });
+          } else if(q.type === 'frq') {
+            state.questions.push({
+              type: 'frq',
+              text: q.text || '(no text)',
+              example: q.example || ''
+            });
+          }
+        });
+
+        renderList();
+        jsonInput.value = '';
+        alert('Successfully imported ' + data.questions.length + ' questions!');
+
+      } catch(err) {
+        console.error('Import failed:', err);
+        alert('Failed to import: ' + err.message + '\n\nMake sure you copied the complete JSON response from your AI.');
+      }
+    };
+
+    // Init
+    renderList();
+  </script>
+</body>
+</html>
