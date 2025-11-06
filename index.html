@@ -535,6 +535,12 @@
     const viewBtn = document.getElementById('viewAnswers');
     const darkToggle = document.getElementById('darkToggle');
 
+    // HTML escaping helper
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
     // Render
     function render(){
       quiz.innerHTML='';
