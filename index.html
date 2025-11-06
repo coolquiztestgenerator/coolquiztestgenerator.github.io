@@ -5,10 +5,59 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Quiz Generator</title>
   <style>
-    :root{--bg:#f5f7fb;--card:#fff;--text:#111;--muted:#555;--accent:#2563eb;--border:rgba(0,0,0,0.04)}
-    .dark{--bg:#0b1220;--card:#0f1724;--text:#e6eef8;--muted:#9fb1d1;--accent:#60a5fa;--border:rgba(255,255,255,0.03)}
-    html,body{height:100%;margin:0;font-family:Inter,Segoe UI,system-ui,Arial,sans-serif;background:var(--bg);color:var(--text)}
-    .app{max-width:1100px;margin:28px auto;padding:20px}
+    :root{
+      --bg:#f5f7fb;
+      --card:#fff;
+      --text:#111;
+      --muted:#555;
+      --accent:#2563eb;
+      --border:rgba(0,0,0,0.04);
+      --scrollbar-track:#f1f1f1;
+      --scrollbar-thumb:#888;
+      --scrollbar-thumb-hover:#555;
+      --select-bg:#fff;
+    }
+    .dark{
+      --bg:#0b1220;
+      --card:#0f1724;
+      --text:#e6eef8;
+      --muted:#9fb1d1;
+      --accent:#60a5fa;
+      --border:rgba(255,255,255,0.03);
+      --scrollbar-track:#1a2435;
+      --scrollbar-thumb:#4a5a74;
+      --scrollbar-thumb-hover:#657a9c;
+      --select-bg:#0f1724;
+    }
+    html{
+      scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+      background: var(--bg);
+    }
+    /* Webkit scrollbar styles */
+    ::-webkit-scrollbar {
+      width: 12px;
+      height: 12px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--scrollbar-track);
+      border-radius: 6px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--scrollbar-thumb);
+      border-radius: 6px;
+      border: 3px solid var(--scrollbar-track);
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--scrollbar-thumb-hover);
+    }
+    body{
+      min-height:100vh;
+      margin:0;
+      font-family:Inter,Segoe UI,system-ui,Arial,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+    .app{max-width:1100px;margin:0 auto;padding:20px}
     header{display:flex;align-items:center;justify-content:space-between;gap:12px}
     h1{margin:0;font-size:1.4rem}
     .controls{display:flex;gap:8px;align-items:center}
@@ -18,7 +67,26 @@
     .q-list{max-height:560px;overflow:auto}
     .q-item{border-radius:8px;padding:10px;margin-bottom:10px;background:linear-gradient(180deg,rgba(0,0,0,0.02),transparent)}
     label{display:block;font-size:0.9rem;margin:8px 0 6px}
-    input[type=text], textarea, select{width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text)}
+    input[type=text], textarea, select{
+      width:100%;
+      padding:8px;
+      border-radius:6px;
+      border:1px solid var(--border);
+      background:var(--card);
+      color:var(--text);
+    }
+    select {
+      appearance: none;
+      background-color: var(--select-bg);
+      background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+      background-position: right 0.5rem center;
+      background-repeat: no-repeat;
+      background-size: 1.5em 1.5em;
+      padding-right: 2.5rem;
+    }
+    .dark select {
+      background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%239fb1d1' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+    }
     input::placeholder, textarea::placeholder{color:var(--muted);opacity:0.85}
     .row{display:flex;gap:8px}
     .small{width:48%}
@@ -258,23 +326,184 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>${escapeHtml(title)}</title>
 <style>
-  :root{--bg:#f7fafc;--card:#fff;--text:#0b1220;--muted:#475569;--accent:#0655d1;--border:rgba(0,0,0,0.04);--success:#dcfce7;--error:#fee2e2}
-  .dark{--bg:#071126;--card:#071833;--text:#e6eef8;--muted:#9fb1d1;--accent:#60a5fa;--border:rgba(255,255,255,0.03);--success:rgba(34,197,94,0.1);--error:rgba(239,68,68,0.1)}
-  body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text);padding:18px}
-  input[type=text], textarea, select{border:1px solid var(--border);background:transparent;color:var(--text);padding:6px;border-radius:6px}
-  input::placeholder, textarea::placeholder{color:var(--muted);opacity:0.85}
-  .wrap{max-width:900px;margin:0 auto}
-  .card{background:var(--card);padding:14px;border-radius:10px;box-shadow:0 8px 28px rgba(2,6,23,0.06)}
-  .q{margin-bottom:12px;padding:10px;border-radius:8px}
-  .muted{color:var(--muted)}
-  .accent{background:var(--accent);color:white;border:none;padding:8px 12px;border-radius:8px}
-  .secondary{background:transparent;border:1px solid var(--border);padding:7px 10px;border-radius:8px;color:var(--text)}
-  .correct{background:var(--success)}
-  .wrong{background:var(--error)}
-  .example{margin-top:8px;padding:8px;background:linear-gradient(90deg,rgba(0,0,0,0.02),transparent);border-radius:6px}
-  textarea{width:100%;min-height:80px}
-  .top{display:flex;justify-content:space-between;align-items:center;gap:8px}
-  @media(max-width:600px){.top{flex-direction:column;align-items:flex-start}}
+  :root {
+    --bg: #f7fafc;
+    --card: #fff;
+    --text: #0b1220;
+    --muted: #475569;
+    --accent: #0655d1;
+    --border: rgba(0,0,0,0.04);
+    --success: #dcfce7;
+    --error: #fee2e2;
+    --correct-text: #15803d;
+    --wrong-text: #b91c1c;
+    --answer-bg: rgba(0,0,0,0.02);
+    --scrollbar-track: #f1f1f1;
+    --scrollbar-thumb: #888;
+    --scrollbar-thumb-hover: #555;
+  }
+  .dark {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --text: #f8fafc;
+    --muted: #94a3b8;
+    --accent: #3b82f6;
+    --border: rgba(255,255,255,0.1);
+    --success: rgba(34,197,94,0.1);
+    --error: rgba(239,68,68,0.1);
+    --correct-text: #4ade80;
+    --wrong-text: #f87171;
+    --answer-bg: rgba(255,255,255,0.03);
+    --scrollbar-track: #050b19;
+    --scrollbar-thumb: #162236;
+    --scrollbar-thumb-hover: #1f2d47;
+  }
+  body {
+    margin: 0;
+    font-family: Inter,Segoe UI,Arial,sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 18px;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  }
+  /* Webkit scrollbar styles */
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+    border-radius: 6px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 6px;
+    border: 3px solid var(--scrollbar-track);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+  input[type=text], textarea, select {
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    padding: 8px;
+    border-radius: 6px;
+    transition: border-color 0.2s;
+  }
+  input[type=text]:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  input::placeholder, textarea::placeholder {
+    color: var(--muted);
+    opacity: 0.85;
+  }
+  .wrap {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .card {
+    background: var(--card);
+    padding: 18px;
+    border-radius: 12px;
+    box-shadow: 0 8px 28px rgba(2,6,23,0.06);
+    border: 1px solid var(--border);
+  }
+  .q {
+    margin-bottom: 16px;
+    padding: 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    transition: border-color 0.2s;
+  }
+  .muted {
+    color: var(--muted);
+  }
+  .accent {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+    transition: opacity 0.2s;
+  }
+  .accent:hover {
+    opacity: 0.9;
+  }
+  .secondary {
+    background: transparent;
+    border: 1px solid var(--border);
+    padding: 7px 12px;
+    border-radius: 8px;
+    color: var(--text);
+    transition: background-color 0.2s;
+  }
+  .secondary:hover {
+    background: var(--answer-bg);
+  }
+  .correct {
+    border-color: var(--success);
+  }
+  .correct::after {
+    content: '✓ Correct';
+    color: var(--correct-text);
+    font-weight: 500;
+    display: block;
+    margin-top: 8px;
+  }
+  .wrong {
+    border-color: var(--error);
+  }
+  .wrong::after {
+    content: '✗ Incorrect';
+    color: var(--wrong-text);
+    font-weight: 500;
+    display: block;
+    margin-top: 8px;
+  }
+  .example {
+    margin-top: 12px;
+    padding: 12px;
+    background: var(--answer-bg);
+    border-radius: 8px;
+    font-style: italic;
+  }
+  .correct-answer {
+    color: var(--correct-text);
+    font-weight: 700;
+    position: relative;
+    padding-left: 20px;
+  }
+  .correct-answer::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+  }
+  textarea {
+    width: 100%;
+    min-height: 80px;
+    resize: vertical;
+  }
+  .top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  #score {
+    padding: 12px;
+    border-radius: 8px;
+    background: var(--card);
+    border: 1px solid var(--border);
+  }
+  @media(max-width:600px) {
+    .top {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
 </style>
 </head>
 <body class="${preferDark? 'dark':''}">
@@ -295,6 +524,10 @@
   </div>
 
   <script>
+    function escapeHtml(s){ 
+      return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); 
+    }
+    
     const questions = ${data};
     const quiz = document.getElementById('quiz');
     const scoreDiv = document.getElementById('score');
@@ -326,7 +559,7 @@
       });
     }
 
-    function grade(){
+    function grade(showAnswers = false){
       let correct=0, totalMCQ=0;
       questions.forEach((q, idx)=>{
         if(q.type!=='mcq') return;
@@ -335,6 +568,16 @@
         const parent = document.querySelector('.q[data-idx="' + idx + '"]');
         // clear previous
         parent.classList.remove('correct','wrong');
+
+        // Always show correct answer in bold if showAnswers is true
+        if(showAnswers) {
+          const radios = parent.querySelectorAll('input[type=radio]');
+          radios.forEach((r,i)=>{
+            const label = r.parentElement.querySelector('span');
+            if(i === (q.correctIndex||0)) label.style.fontWeight='700';
+          });
+        }
+
         if(sel){
           const val = parseInt(sel.value,10);
           if(val === (q.correctIndex||0)) { correct++; parent.classList.add('correct'); }
@@ -362,11 +605,18 @@
           const radios = el.querySelectorAll('input[type=radio]');
           radios.forEach((r,i)=>{
             const label = r.parentElement.querySelector('span');
-            if(i=== (q.correctIndex||0)) label.style.fontWeight='700';
+            const text = label.textContent;
+            if(i === (q.correctIndex||0)) {
+              label.innerHTML = '<span class="correct-answer">' + text + '</span>';
+            }
           });
         } else {
-          const ex = document.createElement('div'); ex.className='example'; ex.innerHTML = '<strong>Example:</strong> ' + escapeHtml(q.example||'(no example)');
-          if(!el.querySelector('.example')) el.appendChild(ex);
+          if(!el.querySelector('.example')) {
+            const ex = document.createElement('div');
+            ex.className = 'example';
+            ex.innerHTML = '<span class="correct-answer">Example answer:</span><div style="margin-top:6px">' + escapeHtml(q.example||'(no example)') + '</div>';
+            el.appendChild(ex);
+          }
         }
       });
       // Also grade MCQs if not yet
@@ -375,6 +625,7 @@
     };
 
     // Dark toggle
+    darkToggle.checked = document.body.classList.contains('dark');
     darkToggle.onchange = ()=>{ document.body.classList.toggle('dark', darkToggle.checked); };
 
     render();
@@ -503,8 +754,8 @@ You must respond with ONLY a JSON object in exactly this format:
 }
 
 Requirements:
-1. Generate exactly 3 questions (2 MCQs and 1 FRQ)
-2. Make questions clear and educational
+1. Generate exactly the amount the person wants: no more, and especially no less.
+2. Make questions clear, educational, and challenging for the grade level.
 3. For MCQs, ensure one answer is clearly correct
 4. ${full ? 'Include detailed example answers for FRQs' : 'Keep example answers brief'}
 5. Return ONLY the JSON object - no other text
