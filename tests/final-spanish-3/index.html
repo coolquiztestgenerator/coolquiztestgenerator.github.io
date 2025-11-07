@@ -1,0 +1,364 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Spanish 3: Daily Routine and Water Conservation Practice Quiz</title>
+<style>
+:root {
+  --bg: #f5f7fb;
+  --card: #ffffffcc;
+  --text: #111827;
+  --muted: #6b7280;
+  --accent: #2563eb;
+  --border: rgba(0, 0, 0, 0.05);
+  --success: #dcfce7;
+  --error: #fee2e2;
+  --correct-text: #15803d;
+  --wrong-text: #b91c1c;
+  --radius: 12px;
+  --shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+  --transition: all 0.25s ease;
+}
+
+.dark {
+  --bg: #0b1120;
+  --card: #10192caa;
+  --text: #e5e7eb;
+  --muted: #9fb1d1;
+  --accent: #3b82f6;
+  --border: rgba(255, 255, 255, 0.05);
+  --success: rgba(34, 197, 94, 0.1);
+  --error: rgba(239, 68, 68, 0.1);
+  --correct-text: #4ade80;
+  --wrong-text: #f87171;
+  --shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+}
+
+html, body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  transition: var(--transition);
+  scrollbar-color: var(--accent) var(--bg);
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+.wrap {
+  max-width: 850px;
+  margin: 0 auto;
+  padding: 28px 20px 60px;
+}
+
+h2 {
+  margin: 0;
+  font-weight: 600;
+  font-size: 1.6rem;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.card {
+  background: var(--card);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  transition: var(--transition);
+}
+
+button {
+  cursor: pointer;
+  font-weight: 500;
+  border: none;
+  border-radius: var(--radius);
+  padding: 10px 16px;
+  transition: var(--transition);
+  font-size: 0.95rem;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.accent {
+  background: var(--accent);
+  color: white;
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.3);
+}
+.accent:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+.secondary {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.secondary:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.q {
+  margin-bottom: 20px;
+  padding: 18px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(0,0,0,0.02), transparent);
+  transition: var(--transition);
+}
+.q:hover {
+  border-color: var(--accent);
+}
+
+.q strong {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  cursor: pointer;
+}
+
+textarea {
+  width: 100%;
+  min-height: 90px;
+  resize: vertical;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  padding: 10px 12px;
+  font-family: inherit;
+  transition: var(--transition);
+}
+textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.correct {
+  border-color: var(--success);
+}
+.correct::after {
+  content: "✓ Correct";
+  color: var(--correct-text);
+  font-weight: 600;
+  display: block;
+  margin-top: 8px;
+}
+
+.wrong {
+  border-color: var(--error);
+}
+.wrong::after {
+  content: "✗ Incorrect";
+  color: var(--wrong-text);
+  font-weight: 600;
+  display: block;
+  margin-top: 8px;
+}
+
+.correct-answer {
+  color: var(--correct-text);
+  font-weight: 600;
+  position: relative;
+  padding-left: 22px;
+}
+.correct-answer::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+}
+
+.example {
+  margin-top: 12px;
+  padding: 14px;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 10px;
+  font-style: italic;
+}
+
+#score {
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 14px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+@media (max-width: 600px) {
+  .top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .card {
+    padding: 18px;
+  }
+}
+</style>
+</head>
+<body class="">
+  <div class="wrap">
+    <div class="top" style="margin-bottom:10px">
+      <h2 style="margin:0">Spanish 3: Daily Routine and Water Conservation Practice Quiz</h2>
+      <div>
+        <label><input id="darkToggle" type="checkbox"> Dark</label>
+        <button id="viewAnswers" class="secondary">View Answers</button>
+      </div>
+    </div>
+
+    <div id="quiz" class="card"></div>
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button id="submitBtn" class="accent">Submit</button>
+      <div id="score" class="muted"></div>
+    </div>
+  </div>
+
+  <script>
+    function escapeHtml(s){ 
+      return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); 
+    }
+    
+    const questions = [{"type":"mcq","text":"Choose the correct $yo$ (I) form of the verb **levantarse** (to get up) in the present tense.","choices":["me levante","me levanto","te levantas","se levanta"],"correctIndex":1},{"type":"frq","text":"Write a Spanish sentence stating that someone (she/ella) uses a towel to dry off.","example":"Ella usa la toalla para secarse."},{"type":"mcq","text":"What is the Spanish for **to waste**?","choices":["reparar","conservar","desperdiciar","ahorrar"],"correctIndex":2},{"type":"frq","text":"Translate: \"The instinct to save is ecological.\"","example":"El instinto de ahorrar es ecológico."},{"type":"mcq","text":"La mejor manera de **concienciar** a la gente sobre el agua es: (The best way to raise awareness of water is to:)","choices":["desperdiciar agua.","educarlos sobre la huella hídrica.","usar más la manguera.","comprar más toallas."],"correctIndex":1},{"type":"mcq","text":"¿Qué significa **reparar fugas**?","choices":["to close the faucet","to waste water","to save money","to repair leaks"],"correctIndex":3},{"type":"mcq","text":"Which phrase means **to get the documents**?","choices":["reservar el asiento","conseguir los documentos","ahorrar dinero","planear el viaje"],"correctIndex":1},{"type":"frq","text":"Translate the following sentence into English: \"Necesito conseguir la crema de afeitar y el champú.\"","example":"I need to get the shaving cream and the shampoo."},{"type":"mcq","text":"What is **la toalla** in English?","choices":["towel","razor","soap","wipe"],"correctIndex":0},{"type":"mcq","text":"How do you say **You (tú) shave** using **afeitarse**?","choices":["tú afeitas","se afeita","te afeitas","me afeito"],"correctIndex":2},{"type":"mcq","text":"Which reflexive verb means **to wash oneself**?","choices":["ducharse","secarse","banarse","lavarse"],"correctIndex":3},{"type":"mcq","text":"La acción de _____ dinero es opuesta a desperdiciar. (The action of _____ money is the opposite of wasting.)","choices":["gastar","cerrar","ahorrar","conservar"],"correctIndex":2},{"type":"frq","text":"Translate: \"Es importante ahorrar el agua y conservar los glaciares.\"","example":"It is important to save water and conserve the glaciers."},{"type":"mcq","text":"If you see the verb form **planeamos**, which English subject/tense is it?","choices":["You planned","I plan","We plan","They plan"],"correctIndex":2},{"type":"frq","text":"Translate the following sentence into Spanish: \"I wash my face in the sink.\"","example":"Yo me lavo la cara en el lavabo."},{"type":"frq","text":"Write a Spanish sentence saying that your friend brushes his hair. (Use the verb **cepillarse el cabello**).","example":"Mi amigo se cepilla el cabello antes de salir."},{"type":"mcq","text":"Para lavarse el cuerpo, se necesita _____ y agua. (To wash one's body, one needs _____ and water.)","choices":["la bañera","la toallita","la rasuradora","el jabón"],"correctIndex":3},{"type":"frq","text":"Write a Spanish sentence saying \"We put on makeup.\" (Use the verb **maquillarse**).","example":"Nos maquillamos para la fiesta."},{"type":"frq","text":"Translate: \"Do not waste water.\" (Use the formal Usted command and the verb **gastar/desperdiciar**).","example":"No gaste/desperdicie agua."},{"type":"mcq","text":"How do you say **water footprint**?","choices":["el agua virtual","los recursos hídricos","la huella hídrica","los glaciares"],"correctIndex":2},{"type":"frq","text":"Translate: \"We plan to reserve the resources.\"","example":"Nosotros planeamos reservar los recursos."},{"type":"mcq","text":"What does the Spanish verb **ducharse** mean?","choices":["to shower","to dry up","to shave","to get up"],"correctIndex":0},{"type":"mcq","text":"Choose the correct translation for **deodorant**.","choices":["el jabón","el desodorante","la rasuradora","el champú"],"correctIndex":1},{"type":"frq","text":"Write a Spanish sentence that names two items found in **el baño**.","example":"En el baño están la bañera y el retrete."},{"type":"mcq","text":"Conjugate **conseguir** (to get) for $usted$ (formal you) in the present tense.","choices":["consigue","conseguimos","consiga","consigues"],"correctIndex":0},{"type":"frq","text":"Write a Spanish sentence using **el lavaplatos/el lavavajillas**.","example":"Mi mamá pone los platos sucios en el lavaplatos/lavavajillas."},{"type":"mcq","text":"Un proyecto que no daña el medio ambiente se considera _____. (A project that does not harm the environment is considered _____.)","choices":["conciente","instintivo","ecológico","innato"],"correctIndex":2},{"type":"mcq","text":"What is the Spanish word for **conditioner**?","choices":["el champú","la toalla","el condicionador","la crema de afeitar"],"correctIndex":2},{"type":"mcq","text":"Después de lavarme el pelo, uso _____ para suavizarlo. (After washing my hair, I use _____ to soften it.)","choices":["el champú","el condicionador","la crema de afeitar","el desodorante"],"correctIndex":1},{"type":"mcq","text":"How do you say **to brush one's teeth** in Spanish?","choices":["cepillarse el cabello","maquillarse","lavarse las manos","cepillarse los dientes"],"correctIndex":3},{"type":"frq","text":"Name the two words on the vocabulary list that can refer to the **toilet**.","example":"el retrete y el excusado."},{"type":"mcq","text":"What does **el lavabo** refer to?","choices":["the toilet","the sink","the bathtub","the washing machine"],"correctIndex":1},{"type":"mcq","text":"The word **innato** translates to:","choices":["innate","planned","reserved","conscious"],"correctIndex":0},{"type":"frq","text":"Use the verb **afeitarse** in a complete Spanish sentence using the $yo$ form.","example":"Yo me afeito con mi nueva rasuradora."},{"type":"frq","text":"Write a Spanish sentence saying that people need to be **conciente** of the water crisis.","example":"La gente necesita ser conciente de la crisis del agua."},{"type":"mcq","text":"¿Dónde está el _____? Necesito cepillarme los dientes. (Where is the _____? I need to brush my teeth.)","choices":["el cabezal de ducha","el retrete","la cocina","el lavabo"],"correctIndex":3},{"type":"mcq","text":"What reflexive pronoun is missing? \"Mi hermana _____ maquilla cada mañana.\"","choices":["me","te","nos","se"],"correctIndex":3},{"type":"frq","text":"Give an informal (tú) negative command in Spanish using the verb **cerrar** and the noun **la llava/el grifo**.","example":"No cierres la llava/el grifo."},{"type":"frq","text":"Write a short Spanish phrase or sentence about the importance of **reparar fugas**.","example":"Reparar fugas es esencial para ahorrar recursos hídricos."},{"type":"frq","text":"In the context of the environment, explain what **la huella hídrica** means in Spanish.","example":"Es la cantidad de agua dulce utilizada para producir bienes y servicios."},{"type":"mcq","text":"Antes de salir de casa, es importante _____ la puerta. (Before leaving home, it is important to _____ the door.)","choices":["reservar","conseguir","planear","cerrar"],"correctIndex":3},{"type":"mcq","text":"¿Cuál es el sinónimo de **el retrete**?","choices":["el lavabo","el rociador","la lavadora","el excusado"],"correctIndex":3},{"type":"mcq","text":"What is the correct conjugation and pronoun for $Tú$ (you) with **enjabonarse** (to soap up)?","choices":["se enjabonas","me enjabono","te enjabono","te enjabonas"],"correctIndex":3},{"type":"mcq","text":"El término **los recursos hídricos** se refiere a: (The term water resources refers to:)","choices":["las fuentes de agua dulce de un país.","el agua que contienen los glaciares.","la cantidad de agua que gastamos.","la huella de un zapato mojado."],"correctIndex":0},{"type":"mcq","text":"Complete the sentence: \"$Nosotros$ _____ secamos con la toalla.\"","choices":["te","se","nos","me"],"correctIndex":2},{"type":"frq","text":"Translate: \"You (tú) waste a lot of virtual water.\"","example":"Tú desperdicias/gastas mucha agua virtual."},{"type":"mcq","text":"Choose the correct form of **cerrar** (to close, shut) for $nosotros/nosotras$ in the present tense.","choices":["cerremos","ceramos","cierramos","cerramos"],"correctIndex":3},{"type":"frq","text":"Translate the following sentence into English: \"Ella se acuesta tarde porque no tiene instinto de dormir.\"","example":"She goes to bed late because she doesn't have the instinct to sleep."},{"type":"frq","text":"Translate the following sentence into English: \"Me enjabono antes de ducharme.\"","example":"I soap up before showering."},{"type":"mcq","text":"Conjugate **acostarse** (to lie down/go to bed) for $ellos/ellas/ustedes$ in the present tense.","choices":["se acosta","se acuesten","se acuestan","me acuesto"],"correctIndex":2}];
+    const quiz = document.getElementById('quiz');
+    const scoreDiv = document.getElementById('score');
+    const submitBtn = document.getElementById('submitBtn');
+    const viewBtn = document.getElementById('viewAnswers');
+    const darkToggle = document.getElementById('darkToggle');
+
+    // HTML escaping helper
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    // Render
+    function render(){
+      quiz.innerHTML='';
+      questions.forEach((q, idx)=>{
+        const el = document.createElement('div'); el.className='q'; el.dataset.idx=idx;
+        const title = document.createElement('div'); title.innerHTML = '<strong>Q' + (idx+1) + '.</strong> ' + escapeHtml(q.text);
+        el.appendChild(title);
+        if(q.type==='mcq'){
+          const list = document.createElement('div'); list.style.marginTop='8px';
+          q.choices.forEach((opt, i)=>{
+            const id = 'q' + idx + '_opt' + i;
+            const row = document.createElement('div');
+            row.innerHTML = '<label style="display:flex;gap:8px;align-items:center"><input type="radio" name="q' + idx + '" value="' + i + '"> <span>' + String.fromCharCode(65+i) + '. ' + escapeHtml(opt) + '</span></label>';
+            list.appendChild(row);
+          });
+          el.appendChild(list);
+        } else {
+          const ta = document.createElement('textarea'); ta.placeholder = 'Write your answer here.'; ta.dataset.frqid = idx; ta.style.marginTop='8px'; el.appendChild(ta);
+          const hint = document.createElement('div'); hint.className='muted'; hint.style.marginTop='6px'; hint.textContent = 'An example answer is available when viewing answers.'; el.appendChild(hint);
+        }
+        quiz.appendChild(el);
+      });
+    }
+
+    function grade(showAnswers = false){
+      let correct=0, totalMCQ=0;
+      questions.forEach((q, idx)=>{
+        if(q.type!=='mcq') return;
+        totalMCQ++;
+        const sel = document.querySelector('input[name="q' + idx + '"]:checked');
+        const parent = document.querySelector('.q[data-idx="' + idx + '"]');
+        // clear previous
+        parent.classList.remove('correct','wrong');
+
+        // Always show correct answer in bold if showAnswers is true
+        if(showAnswers) {
+          const radios = parent.querySelectorAll('input[type=radio]');
+          radios.forEach((r,i)=>{
+            const label = r.parentElement.querySelector('span');
+            if(i === (q.correctIndex||0)) label.style.fontWeight='700';
+          });
+        }
+
+        if(sel){
+          const val = parseInt(sel.value,10);
+          if(val === (q.correctIndex||0)) { correct++; parent.classList.add('correct'); }
+          else parent.classList.add('wrong');
+        } else {
+          parent.classList.add('wrong');
+        }
+      });
+      return {correct,totalMCQ};
+    }
+
+    submitBtn.onclick = ()=>{
+      const res = grade();
+      scoreDiv.textContent = 'Score: ' + res.correct + ' / ' + res.totalMCQ + ' (MCQs). FRQs are shown as examples and are not auto-graded.';
+      // disable inputs
+      document.querySelectorAll('input[type=radio], textarea').forEach(el=>el.disabled=true);
+    };
+
+    viewBtn.onclick = ()=>{
+      // show answers and examples
+      questions.forEach((q, idx)=>{
+        const el = document.querySelector('.q[data-idx="' + idx + '"]');
+        if(q.type==='mcq'){
+          // highlight correct choice
+          const radios = el.querySelectorAll('input[type=radio]');
+          radios.forEach((r,i)=>{
+            const label = r.parentElement.querySelector('span');
+            const text = label.textContent;
+            if(i === (q.correctIndex||0)) {
+              label.innerHTML = '<span class="correct-answer">' + text + '</span>';
+            }
+          });
+        } else {
+          if(!el.querySelector('.example')) {
+            const ex = document.createElement('div');
+            ex.className = 'example';
+            ex.innerHTML = '<span class="correct-answer">Example answer:</span><div style="margin-top:6px">' + escapeHtml(q.example||'(no example)') + '</div>';
+            el.appendChild(ex);
+          }
+        }
+      });
+      // Also grade MCQs if not yet
+      const res = grade();
+      scoreDiv.textContent = 'Score: ' + res.correct + ' / ' + res.totalMCQ + ' (MCQs). FRQs are not graded here.';
+    };
+
+    // Dark toggle
+    darkToggle.checked = document.body.classList.contains('dark');
+    darkToggle.onchange = ()=>{ document.body.classList.toggle('dark', darkToggle.checked); };
+
+    render();
+  </script>
+</body>
+</html>
