@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chem Final Practice Quiz</title>
+<style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f4; }
+    h1 { text-align: center; }
+    .question { background: #fff; padding: 15px; margin: 15px 0; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .choices button { display: block; margin: 5px 0; padding: 10px; width: 100%; font-size: 16px; }
+    .feedback { margin-top: 10px; font-weight: bold; }
+    .correct { color: green; }
+    .incorrect { color: red; }
+    #next { margin-top: 20px; padding: 10px 20px; font-size: 16px; display:none; }
+</style>
+</head>
+<body>
+
+<h1>Chem Final Practice Quiz</h1>
+<div id="quiz-container"></div>
+<button id="next">Next Question</button>
+<div id="score" style="margin-top:20px; font-weight:bold;"></div>
+
+<script>
+const questions = [
+  // Unit 1 - The Atom
+  {q:"Which subatomic particle has a negative charge?", choices:["Proton","Neutron","Electron","Positron"], ans:"C", explanation:"Electrons have a negative charge."},
+  {q:"The nucleus of an atom contains:", choices:["Protons and electrons","Neutrons and electrons","Protons and neutrons","Only protons"], ans:"C", explanation:"The nucleus contains protons and neutrons."},
+  {q:"The atomic number represents the number of:", choices:["Protons","Neutrons","Electrons","Isotopes"], ans:"A", explanation:"Atomic number equals number of protons."},
+  {q:"Isotopes of the same element differ in their number of:", choices:["Protons","Electrons","Neutrons","Energy levels"], ans:"C", explanation:"Isotopes have different numbers of neutrons."},
+  {q:"Which statement about electrons is true?", choices:["They are located in the nucleus","They are positively charged","They move in orbitals around the nucleus","They have the same mass as protons"], ans:"C", explanation:"Electrons move in orbitals around the nucleus."},
+  {q:"What is the mass number of an atom with 8 protons and 8 neutrons?", choices:["8","16","24","32"], ans:"B", explanation:"Mass number = protons + neutrons = 8+8=16."},
+  {q:"A neutral atom of oxygen has how many electrons?", choices:["6","7","8","9"], ans:"C", explanation:"Neutral oxygen has same electrons as protons: 8."},
+  {q:"Which type of radiation is the most penetrating?", choices:["Alpha","Beta","Gamma","Neutron"], ans:"C", explanation:"Gamma radiation is the most penetrating."},
+  {q:"Which particle is emitted during beta decay?", choices:["Helium nucleus","Electron","Proton","Photon"], ans:"B", explanation:"Beta decay emits an electron (β particle)."},
+  {q:"How many neutrons are in an atom of sodium-23?", choices:["10","11","12","13"], ans:"C", explanation:"Sodium-23 has 11 protons, neutrons = 23-11=12."},
+  {q:"What does the symbol ⁴₂He represent?", choices:["Beta particle","Alpha particle","Proton","Neutron"], ans:"B", explanation:"⁴₂He is an alpha particle."},
+  {q:"Which scientist discovered the nucleus?", choices:["Dalton","Thomson","Rutherford","Bohr"], ans:"C", explanation:"Rutherford discovered the nucleus."},
+  {q:"The electron cloud model describes electrons as:", choices:["Fixed orbits","Definite paths","Probability regions","Stationary"], ans:"C", explanation:"Electrons exist in probability regions called orbitals."},
+  {q:"Which of the following is an isotope of carbon?", choices:["¹²C and ¹³N","¹²C and ¹³C","¹²C and ¹⁴N","¹²C and ¹⁶O"], ans:"B", explanation:"¹²C and ¹³C are isotopes (same protons, different neutrons)."},
+  {q:"Which part of the atom has almost all its mass?", choices:["Electron cloud","Nucleus","Valence shell","Outer orbitals"], ans:"B", explanation:"Almost all mass is in the nucleus."},
+  {q:"A neutral atom becomes an ion when it:", choices:["Changes its number of protons","Gains or loses electrons","Gains neutrons","Emits radiation"], ans:"B", explanation:"Gaining or losing electrons forms ions."},
+  {q:"Which particle has approximately the same mass as a proton?", choices:["Electron","Neutron","Photon","Beta particle"], ans:"B", explanation:"Neutron mass ≈ proton mass."},
+  {q:"What is the charge of a neutron?", choices:["+1","0","-1","+2"], ans:"B", explanation:"Neutrons are neutral (0 charge)."},
+  {q:"Which type of nuclear radiation has a +2 charge?", choices:["Alpha","Beta","Gamma","Neutron"], ans:"A", explanation:"Alpha particles have +2 charge."},
+  {q:"Which type of decay increases the atomic number by 1?", choices:["Alpha","Beta","Gamma","Positron"], ans:"B", explanation:"Beta decay converts a neutron to a proton, increasing atomic number by 1."},
+
+  // Unit 2 - Periodic Table
+  {q:"Who arranged the first periodic table by atomic mass?", choices:["Moseley","Mendeleev","Dalton","Bohr"], ans:"B", explanation:"Mendeleev arranged elements by atomic mass."},
+  {q:"Modern periodic law states that properties are periodic functions of:", choices:["Atomic mass","Atomic number","Electron configuration","Isotopic ratio"], ans:"B", explanation:"Modern periodic law uses atomic number."},
+  {q:"Elements in the same group have the same number of:", choices:["Neutrons","Energy levels","Valence electrons","Protons"], ans:"C", explanation:"Same group → same valence electrons."},
+  {q:"Which family contains the most reactive metals?", choices:["Transition metals","Halogens","Alkali metals","Noble gases"], ans:"C", explanation:"Alkali metals are most reactive."},
+  {q:"Which family is stable and rarely reacts?", choices:["Halogens","Alkali metals","Alkaline earth metals","Noble gases"], ans:"D", explanation:"Noble gases are very stable."},
+  {q:"Which element has the highest electronegativity?", choices:["Fluorine","Oxygen","Chlorine","Neon"], ans:"A", explanation:"Fluorine has highest electronegativity."},
+  {q:"Which element has 3 valence electrons?", choices:["Li","Al","C","N"], ans:"B", explanation:"Aluminum has 3 valence electrons."},
+  {q:"What trend increases from left to right across a period?", choices:["Atomic radius","Metallic character","Electronegativity","Reactivity of metals"], ans:"C", explanation:"Electronegativity increases left to right."},
+  {q:"As you go down a group, atomic radius:", choices:["Increases","Decreases","Stays the same","Varies randomly"], ans:"A", explanation:"Atomic radius increases down a group."},
+  {q:"Which element is least reactive?", choices:["Potassium","Calcium","Neon","Chlorine"], ans:"C", explanation:"Neon is inert and least reactive."},
+  {q:"Which element has the lowest ionization energy?", choices:["Na","O","F","Cl"], ans:"A", explanation:"Sodium has the lowest ionization energy in the list."},
+  {q:"Which element would most likely form a cation?", choices:["Cl","Na","O","F"], ans:"B", explanation:"Sodium easily loses an electron to form a cation."},
+  {q:"Which element has 5 valence electrons?", choices:["Nitrogen","Oxygen","Carbon","Fluorine"], ans:"A", explanation:"Nitrogen has 5 valence electrons."},
+  {q:"Which period contains 3 energy levels?", choices:["Period 1","Period 2","Period 3","Period 4"], ans:"C", explanation:"Period 3 elements have 3 energy levels."},
+  {q:"Which element is a metalloid?", choices:["Boron","Neon","Sodium","Chlorine"], ans:"A", explanation:"Boron is a metalloid."},
+  {q:"Which group contains the noble gases?", choices:["Group 1","Group 2","Group 17","Group 18"], ans:"D", explanation:"Group 18 contains noble gases."},
+  {q:"Which element has the largest atomic radius?", choices:["Li","F","O","Ne"], ans:"A", explanation:"Lithium has largest atomic radius."},
+  {q:"Which family is the halogens?", choices:["Group 1","Group 17","Group 18","Group 2"], ans:"B", explanation:"Halogens are in Group 17."},
+  {q:"Which element has the smallest radius in period 2?", choices:["Li","Be","O","F"], ans:"D", explanation:"Fluorine has the smallest atomic radius in period 2."},
+  {q:"Which element is a transition metal?", choices:["Fe","Na","Ne","Cl"], ans:"A", explanation:"Iron (Fe) is a transition metal."},
+
+  // Unit 3 - Bonding
+  {q:"Ionic bonds form between:", choices:["Two metals","Two nonmetals","A metal and a nonmetal","Two noble gases"], ans:"C", explanation:"Ionic bonds form between metals and nonmetals."},
+  {q:"Covalent bonds involve the:", choices:["Transfer of electrons","Sharing of electrons","Loss of protons","Gain of neutrons"], ans:"B", explanation:"Covalent bonds share electrons."},
+  {q:"Which compound is ionic?", choices:["CO2","NaCl","H2O","O2"], ans:"B", explanation:"NaCl is an ionic compound."},
+  {q:"What is the charge of a calcium ion?", choices:["+1","+2","-1","-2"], ans:"B", explanation:"Calcium forms Ca²⁺."},
+  {q:"Which of the following is a polyatomic ion?", choices:["O2-","Cl-","SO4^2-","Na+"], ans:"C", explanation:"Sulfate (SO4²⁻) is polyatomic."},
+  {q:"What is the formula for aluminum oxide?", choices:["AlO","AlO2","Al2O3","Al3O2"], ans:"C", explanation:"Al2O3 is aluminum oxide."},
+  {q:"What is the name of FeCl3?", choices:["Iron chloride","Iron(II) chloride","Iron(III) chloride","Ferric dichloride"], ans:"C", explanation:"FeCl3 is Iron(III) chloride."},
+  {q:"Which element is most likely to form anions?", choices:["Sodium","Calcium","Oxygen","Aluminum"], ans:"C", explanation:"Oxygen tends to gain electrons forming anions."},
+  {q:"Which of the following molecules is polar?", choices:["CO2","CH4","H2O","N2"], ans:"C", explanation:"H2O is polar."},
+  {q:"A single covalent bond involves:", choices:["One shared electron","Two shared electrons","Four shared electrons","Two transferred electrons"], ans:"B", explanation:"A single bond shares 2 electrons."},
+  {q:"Which molecule has a trigonal planar shape?", choices:["CH4","BF3","H2O","NH3"], ans:"B", explanation:"BF3 is trigonal planar."},
+  {q:"Which molecule has a bent shape?", choices:["CO2","H2O","NH3","CH4"], ans:"B", explanation:"H2O is bent due to lone pairs."},
+  {q:"Which bond is the most polar?", choices:["H-F","H-Cl","H-Br","H-I"], ans:"A", explanation:"H-F has the largest electronegativity difference."},
+  {q:"Which compound has an ionic lattice structure?", choices:["NaCl","H2O","CO2","CH4"], ans:"A", explanation:"NaCl forms an ionic lattice."},
+  {q:"Which molecule exhibits resonance?", choices:["O3","H2O","CH4","NH3"], ans:"A", explanation:"Ozone (O3) exhibits resonance."},
+  {q:"Which has a double bond?", choices:["C2H6","C2H4","CH4","C2H2"], ans:"B", explanation:"C2H4 has a double bond."},
+  {q:"Which is a nonpolar covalent molecule?", choices:["CO2","HCl","NH3","H2O"], ans:"A", explanation:"CO2 is linear and nonpolar."},
+  {q:"Which atom in H2O has a partial negative charge?", choices:["H","O","Both H","None"], ans:"B", explanation:"Oxygen is partially negative."},
+  {q:"Which ion has the largest radius?", choices:["Na+","Cl-","K+","Mg2+"], ans:"B", explanation:"Cl- is largest due to added electron."},
+  {q:"Which bond angle is closest to 109.5°?", choices:["H2O","CH4","CO2","NH3"], ans:"B", explanation:"CH4 is tetrahedral with ~109.5° bond angles."},
+
+  // Unit 4 - Intermolecular Forces
+  {q:"Intermolecular forces occur:", choices:["Between molecules","Within molecules","Inside nuclei","Between ions only"], ans:"A", explanation:"IMFs act between molecules."},
+  {q:"Which of the following is the strongest IMF?", choices:["London dispersion","Dipole–dipole","Hydrogen bonding","Ionic bonding"], ans:"C", explanation:"Hydrogen bonding is strongest among these IMFs."},
+  {q:"Which molecule exhibits hydrogen bonding?", choices:["CH4","H2S","HF","CO2"], ans:"C", explanation:"HF exhibits hydrogen bonding."},
+  {q:"Which is the weakest type of IMF?", choices:["Dipole–dipole","Hydrogen bonding","London dispersion","Ionic"], ans:"C", explanation:"London dispersion is weakest."},
+  {q:"The higher the IMF strength, the:", choices:["Lower the boiling point","Higher the boiling point","Lower the surface tension","Easier the evaporation"], ans:"B", explanation:"Stronger IMFs increase boiling point."},
+  {q:"Which has the highest boiling point?", choices:["CH4","H2O","CO2","NH3"], ans:"B", explanation:"Water has highest boiling point."},
+  {q:"Nonpolar molecules experience which IMF?", choices:["Hydrogen bonds","Dipole–dipole forces","London dispersion forces","Ionic attraction"], ans:"C", explanation:"Nonpolar molecules have London dispersion."},
+  {q:"Which phase change requires breaking IMFs?", choices:["Freezing","Condensation","Vaporization","Deposition"], ans:"C", explanation:"Vaporization breaks IMFs."},
+  {q:"As temperature increases, IMFs:", choices:["Strengthen","Weaken","Stay constant","Turn into bonds"], ans:"B", explanation:"IMFs weaken with higher temperature."},
+  {q:"A molecule with permanent dipoles has:", choices:["No polarity","Temporary charges only","Unequal charge distribution","Equal charge sharing"], ans:"C", explanation:"Permanent dipoles have unequal charge distribution."},
+  {q:"Which of the following liquids has hydrogen bonding?", choices:["CH3CH3","H2O","CO2","Cl2"], ans:"B", explanation:"Water exhibits hydrogen bonding."},
+  {q:"Which factor increases the strength of London dispersion forces?", choices:["More electrons","Fewer electrons","Shorter bonds","Nonpolar atoms"], ans:"A", explanation:"More electrons strengthen London forces."},
+  {q:"Which molecule has both dipole–dipole and hydrogen bonding?", choices:["H2O","CH4","O2","CO2"], ans:"A", explanation:"Water has dipole-dipole and hydrogen bonding."},
+  {q:"Which IMF is responsible for surface tension in water?", choices:["London","Dipole–dipole","Hydrogen bonding","Ionic"], ans:"C", explanation:"Hydrogen bonding causes surface tension."},
+  {q:"Which property decreases as IMF strength decreases?", choices:["Vapor pressure","Boiling point","Melting point","Density"], ans:"B", explanation:"Boiling point decreases with weaker IMFs."},
+  {q:"Which phase change strengthens IMFs?", choices:["Condensation","Vaporization","Sublimation","Melting"], ans:"A", explanation:"Condensation strengthens IMFs."},
+  {q:"Which molecule would have the highest viscosity?", choices:["CH4","H2O","CO2","He"], ans:"B", explanation:"Water's hydrogen bonding increases viscosity."},
+  {q:"Which molecule is nonpolar and linear?", choices:["CO2","H2O","NH3","HF"], ans:"A", explanation:"CO2 is nonpolar and linear."},
+  {q:"Which molecule is bent due to lone pairs?", choices:["H2O","CO2","CH4","BeCl2"], ans:"A", explanation:"H2O is bent because of lone pairs."},
+  {q:"Which factor affects boiling point the most?", choices:["IMF strength","Molecular mass","Color","Shape"], ans:"A", explanation:"IMF strength has the biggest effect on boiling point."},
+  {q:"Which molecule exhibits London dispersion only?", choices:["CH4","H2O","HF","NH3"], ans:"A", explanation:"CH4 is nonpolar, only London dispersion forces."}
+];
+
+// Shuffle questions
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+  }
+}
+shuffle(questions);
+
+let currentQuestion = 0;
+let score = 0;
+
+const container = document.getElementById('quiz-container');
+const nextBtn = document.getElementById('next');
+const scoreDiv = document.getElementById('score');
+
+function showQuestion() {
+  container.innerHTML = '';
+  nextBtn.style.display = 'none';
+  const qObj = questions[currentQuestion];
+  const qDiv = document.createElement('div');
+  qDiv.className = 'question';
+  qDiv.innerHTML = `<h3>Q${currentQuestion + 1}: ${qObj.q}</h3>`;
+  
+  const choicesDiv = document.createElement('div');
+  choicesDiv.className = 'choices';
+  
+  qObj.choices.forEach((choice, index) => {
+      const btn = document.createElement('button');
+      btn.textContent = `${String.fromCharCode(65+index)}. ${choice}`;
+      btn.onclick = () => checkAnswer(index, qObj);
+      choicesDiv.appendChild(btn);
+  });
+
+  qDiv.appendChild(choicesDiv);
+  container.appendChild(qDiv);
+}
+
+function checkAnswer(index, qObj) {
+  const selected = String.fromCharCode(65 + index);
+  const feedback = document.createElement('div');
+  feedback.className = 'feedback';
+  if (selected === qObj.ans) {
+      feedback.textContent = "Correct! " + qObj.explanation;
+      feedback.classList.add('correct');
+      score++;
+  } else {
+      feedback.textContent = `Incorrect. ${qObj.explanation}`;
+      feedback.classList.add('incorrect');
+  }
+  container.querySelector('.question').appendChild(feedback);
+  nextBtn.style.display = 'block';
+}
+
+nextBtn.onclick = () => {
+  currentQuestion++;
+  if (currentQuestion < questions.length) {
+      showQuestion();
+  } else {
+      container.innerHTML = `<h2>Quiz Completed!</h2>`;
+      scoreDiv.textContent = `Your Score: ${score} / ${questions.length}`;
+      nextBtn.style.display = 'none';
+  }
+}
+
+// Start quiz
+showQuestion();
+</script>
+
+</body>
+</html>
