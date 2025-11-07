@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quizzes</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom font import for better aesthetics */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1f2937; /* Dark background */
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#4f46e5', /* Indigo 600 */
+                        'primary-dark': '#4338ca', /* Indigo 700 */
+                        'card-bg': '#374151', /* Gray 700 */
+                    }
+                }
+            }
+        }
+
+        // JS function to handle the dynamic test navigation
+        function navigateToTest(event) {
+            event.preventDefault();
+            const testNameInput = document.getElementById('testName');
+            const testName = testNameInput.value.trim();
+            const messageBox = document.getElementById('messageBox');
+
+            messageBox.classList.add('hidden');
+            messageBox.textContent = "";
+
+            if (testName) {
+                // Construct the dynamic URL and navigate
+                window.location.href = `/tests/${encodeURIComponent(testName)}`;
+            } else {
+                // Show error message without using alert()
+                messageBox.textContent = "Please enter a name for the test.";
+                messageBox.classList.remove('hidden');
+                messageBox.classList.remove('bg-green-500');
+                messageBox.classList.add('bg-red-500');
+                
+                // Optional: Clear the message after a few seconds
+                setTimeout(() => messageBox.classList.add('hidden'), 3000);
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <div class="w-full max-w-4xl p-6 md:p-10 bg-gray-800 rounded-xl shadow-2xl">
+        <header class="text-center mb-10">
+            <h1 class="text-4xl font-extrabold text-white mb-2">Quiz/Test Generator</h1>
+            <p class="text-lg text-gray-400">Create new quizzes or access existing ones.</p>
+        </header>
+
+        <!-- Message Box for Feedback -->
+        <div id="messageBox" class="hidden text-white p-3 rounded-lg text-center mb-6 transition-opacity duration-300"></div>
+
+        <main class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <!-- Card 1: Quiz Generator Link -->
+            <a href="/generator" class="block">
+                <div class="card-bg p-6 rounded-xl border-t-4 border-primary shadow-lg hover:shadow-xl transition duration-300 transform hover:scale-[1.02] cursor-pointer h-full flex flex-col justify-between">
+                    <div>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 text-primary mb-3">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 18.07a4.5 4.5 0 01-1.897 1.13L6 20l1.267-5.042a4.5 4.5 0 011.13-1.897l8.262-8.262zm0 0l2.652 2.652" />
+                        </svg>
+                        <h2 class="text-2xl font-bold text-white mb-2">Create a New Quiz</h2>
+                        <p class="text-gray-300 mb-4">Start generating questions, defining answers, and setting up parameters for your next test.</p>
+                    </div>
+                    <button class="w-full bg-primary hover:bg-primary-dark text-white font-semibold py-3 rounded-lg shadow-md transition duration-200">
+                        Go to Generator
+                    </button>
+                </div>
+            </a>
+
+            <!-- Card 2: Custom Test Navigation Form -->
+            <div class="card-bg p-6 rounded-xl border-t-4 border-yellow-500 shadow-lg h-full">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 text-yellow-500 mb-3">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 01-2.25 2.25H12a2.25 2.25 0 01-2.25-2.25V5.625c0-.621.504-1.125 1.125-1.125h3.375z" />
+                </svg>
+                <h2 class="text-2xl font-bold text-white mb-4">Take an Existing Test</h2>
+                <p class="text-gray-300 mb-6">Enter the specific name or ID of the test you wish to access below.</p>
+
+                <form onsubmit="navigateToTest(event)">
+                    <input
+                        type="text"
+                        id="testName"
+                        placeholder="e.g., Chemistry_Midterm_2024"
+                        class="w-full p-3 mb-4 rounded-lg bg-gray-700 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500"
+                        required
+                    >
+                    <button type="submit" class="w-full bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-3 rounded-lg shadow-md transition duration-200">
+                        Go to Test<test name>
+                    </button>
+                </form>
+            </div>
+
+        </main>
+    </div>
+
+</body>
+</html>
