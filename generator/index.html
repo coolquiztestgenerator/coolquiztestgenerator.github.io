@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Quiz Generator (OpenRouter Integration)</title>
+  <title>Quiz Generator</title>
   <style>
     :root {
       --bg: #f4f6fb;
@@ -322,14 +322,14 @@
           
           <div class="api-section">
             <label style="display:block;margin-bottom:4px;font-weight:600;">OpenRouter API Key:</label>
-            <input type="password" id="apiKey" placeholder="sk-or-v1-..." style="margin-bottom:6px;">
+            <input type="password" id="apiKey" placeholder="jkdfls" style="margin-bottom:6px;">
             <label style="display:block;margin-bottom:4px;font-weight:600;">Model ID:</label>
-            <input type="text" id="modelId" value="meta-llama/llama-3.3-70b-instruct" placeholder="e.g., meta-llama/llama-3.3-70b-instruct">
+            <input type="text" id="modelId" value="meta-llama/llama-3.3-70b-instruct" placeholder="meta-llama/llama-3.3-70b-instruct">
           </div>
 
           <div style="margin-bottom:8px">
             <div class="row" style="gap:8px;margin-bottom:6px">
-              <input type="text" id="aiTopic" placeholder="Enter a topic (e.g., 'Basic algebra', 'World War 2')" style="flex:1">
+              <input type="text" id="aiTopic" placeholder="Enter a topic and/or other details (e.g., 'Basic algebra', 'World War 2')" style="flex:1">
             </div>
             <div class="row" style="gap:8px;margin-bottom:6px">
               <div class="small" style="flex:1">
@@ -928,11 +928,13 @@ Required number of questions:
 - Free Response Questions (FRQs): ${frqs}
 
 Requirements:
-1. Generate exactly the amount the person wants: no more, and especially no less.
+1. Generate exactly the amount the person wants: no more, and especially no less, though within questions, there can be 1 to infinite options, so you do not need to do 4 exactly.
 2. Make questions clear, educational, and challenging.
 3. For MCQs, ensure one answer is clearly correct.
 4. ${full ? 'Include detailed example answers for FRQs' : 'Keep example answers brief'}
 5. Return ONLY the JSON object - no other text wrapper outside markdown if any, prefer naked JSON string.
+6. DO NOT return invalid json, it also must not use LaTeX, and be usable with raw data reading.
+7. If the user responds a prompt that you are unable to fulfill, respond with a placeholder question, not with something that would invalidate the json.
 
 Remember: Your entire response must be a valid JSON object that can be parsed with JSON.parse().`;
     }
