@@ -296,7 +296,7 @@
       margin-bottom: 12px;
     }
 
-    .file-source-section {
+    .import-section {
       background: rgba(139, 92, 246, 0.04);
       border: 1px dashed #8b5cf6;
       padding: 12px;
@@ -304,29 +304,39 @@
       margin-bottom: 12px;
     }
 
+    .chip-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
     .file-chip {
       display: inline-flex;
       align-items: center;
+      gap: 6px;
       background: var(--border);
       padding: 4px 8px;
       border-radius: 6px;
       font-size: 0.85rem;
-      gap: 6px;
-      margin-top: 4px;
-      margin-right: 4px;
+    }
+
+    .file-chip span {
+      max-width: 160px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .file-chip button {
-      padding: 0;
-      background: none;
+      padding: 0 4px;
+      background: transparent;
       color: var(--muted);
-      font-size: 10px;
-      line-height: 1;
-      cursor: pointer;
+      font-size: 0.8rem;
     }
 
     .file-chip button:hover {
-      color: var(--text);
+      color: #ef4444;
     }
   </style>
 </head>
@@ -336,7 +346,7 @@
     <header>
       <div>
         <h1>Quiz Generator</h1>
-        <div class="muted">Create MCQs and FRQs automatically or manually.</div>
+        <div class="muted">Create MCQs and FRQs automatically via OpenRouter or build them manually.</div>
       </div>
       <div class="controls">
         <label class="topbar"><input type="checkbox" id="darkToggle"> Dark</label>
@@ -360,15 +370,24 @@
             <input type="text" id="modelId" value="meta-llama/llama-3.3-70b-instruct" placeholder="meta-llama/llama-3.3-70b-instruct">
           </div>
 
-          <div class="file-source-section">
-            <label style="display:block;margin-bottom:4px;font-weight:600;color:#8b5cf6;">Reference Files for AI:</label>
-            <input type="file" id="aiSourceFiles" multiple style="margin-bottom:4px;font-size:0.9rem;">
-            <div id="fileChipsContainer"></div>
+          <div class="import-section">
+            <div style="font-weight:600;margin-bottom:4px;color:#8b5cf6;">Reference Source Materials:</div>
+            <div style="display:grid;grid-template-columns: 1fr 1fr;gap:8px;align-items:start;">
+              <div>
+                <label style="font-size:0.8rem;" class="muted">Import Files for AI</label>
+                <input type="file" id="aiContextFiles" multiple style="font-size:0.8rem;margin-top:4px;">
+              </div>
+              <div>
+                <label style="font-size:0.8rem;" class="muted">Load Pre-built Quiz Structure (.json)</label>
+                <input type="file" id="importJsonBtn" accept=".json" style="font-size:0.8rem;margin-top:4px;">
+              </div>
+            </div>
+            <div id="fileChips" class="chip-container"></div>
           </div>
 
           <div style="margin-bottom:8px">
             <div class="row" style="gap:8px;margin-bottom:6px">
-              <input type="text" id="aiTopic" placeholder="Enter a topic and/or other details (e.g., 'Basic algebra', 'World War 2')" style="flex:1">
+              <input type="text" id="aiTopic" placeholder="Enter a topic and/or supplementary instructions (e.g., 'Basic calculus', 'Mitosis review')" style="flex:1">
             </div>
             <div class="row" style="gap:8px;margin-bottom:6px">
               <div class="small" style="flex:1">
@@ -396,11 +415,6 @@
             </div>
      
             <label style="display:block;margin-top:6px"><input type="checkbox" id="aiFull" checked> Generate full details (e.g., complex details/model answers)</label>
-          </div>
-
-          <div style="margin: 12px 0; border-top:1px solid var(--border); padding-top:10px;">
-            <label style="display:block;margin-bottom:4px;font-size:0.9rem" class="muted">Load/Import Existing Quiz Structure (.json):</label>
-            <input type="file" id="importJsonBtn" accept=".json" style="font-size:0.85rem">
           </div>
           
           <div style="display:flex;gap:8px;margin-top:12px;border-top:1px solid var(--border);padding-top:10px;">
@@ -468,8 +482,7 @@
 
     // State
     const state = { questions: [], selected: -1, dark: false };
-    // Track reference documents loaded for context pipeline inclusion
-    let loadedReferenceFiles = [];
+    let attachedTextFiles = []; // Stores text loaded from context file imports
     
     // Elements
     const qList = document.getElementById('qList');
@@ -504,10 +517,10 @@
     const shuffleChoices = document.getElementById('shuffleChoices');
     const includeFrqExamples = document.getElementById('includeFrqExamples');
     
-    // AI Reference Files Elements
-    const aiSourceFilesInput = document.getElementById('aiSourceFiles');
-    const fileChipsContainer = document.getElementById('fileChipsContainer');
+    // Core Multi-Importer Elements
+    const aiContextFiles = document.getElementById('aiContextFiles');
     const importJsonBtn = document.getElementById('importJsonBtn');
+    const fileChips = document.getElementById('fileChips');
 
     // API Specific Elements
     const apiKeyInput = document.getElementById('apiKey');
@@ -518,60 +531,54 @@
     if(localStorage.getItem('openrouter_key')) apiKeyInput.value = localStorage.getItem('openrouter_key');
     if(localStorage.getItem('openrouter_model')) modelIdInput.value = localStorage.getItem('openrouter_model');
 
-    // Handle JSON Structure Imports
+    // Handle Local Quiz Layout Data Schema Import (.json)
     importJsonBtn.onchange = (e) => {
       const file = e.target.files[0];
-      if(!file) return;
+      if (!file) return;
       const reader = new FileReader();
       reader.onload = (evt) => {
         importQuizData(evt.target.result);
-        importJsonBtn.value = '';
+        importJsonBtn.value = ""; 
       };
       reader.readAsText(file);
     };
 
-    // Process uploaded file texts to feed to the AI context pipeline
-    aiSourceFilesInput.onchange = async (e) => {
+    // Handle AI Document Context Source File Import (.txt, .md, etc.)
+    aiContextFiles.onchange = async (e) => {
       const files = Array.from(e.target.files);
       for (let file of files) {
-        // Prevent matching duplicates
-        if (loadedReferenceFiles.some(f => f.name === file.name && f.size === file.size)) continue;
-        
+        if (attachedTextFiles.some(f => f.name === file.name && f.size === file.size)) continue;
         try {
-          const textContent = await readFileAsText(file);
-          loadedReferenceFiles.push({
-            name: file.name,
-            size: file.size,
-            content: textContent
-          });
+          const content = await readBlobAsText(file);
+          attachedTextFiles.push({ name: file.name, size: file.size, text: content });
         } catch (err) {
-          alert(`Error reading reference file "${file.name}": ${err.message}`);
+          alert(`Error reading file "${file.name}": ${err.message}`);
         }
       }
       renderFileChips();
-      aiSourceFilesInput.value = ''; // Reset input element state trigger
+      aiContextFiles.value = ""; 
     };
 
-    function readFileAsText(file) {
+    function readBlobAsText(file) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e) => resolve(e.target.result);
-        reader.onerror = (e) => reject(new Error("File processing error"));
+        reader.onerror = () => reject(new Error("Unable to parse text file"));
         reader.readAsText(file);
       });
     }
 
     function renderFileChips() {
-      fileChipsContainer.innerHTML = '';
-      loadedReferenceFiles.forEach((file, index) => {
+      fileChips.innerHTML = "";
+      attachedTextFiles.forEach((file, index) => {
         const chip = document.createElement('div');
         chip.className = 'file-chip';
         chip.innerHTML = `<span>📄 ${escapeHtml(file.name)}</span><button data-idx="${index}">✕</button>`;
         chip.querySelector('button').onclick = () => {
-          loadedReferenceFiles.splice(index, 1);
+          attachedTextFiles.splice(index, 1);
           renderFileChips();
         };
-        fileChipsContainer.appendChild(chip);
+        fileChips.appendChild(chip);
       });
     }
 
@@ -615,7 +622,7 @@
 
     showPrompt.onclick = () => {
       const topic = aiTopic.value.trim();
-      if (!topic && loadedReferenceFiles.length === 0) return alert('Please enter a topic or upload source files first.');
+      if (!topic && attachedTextFiles.length === 0) return alert('Please enter a topic or upload context documents first.');
       promptText.value = generatePrompt(topic, aiFull.checked);
       promptSection.style.display = 'block';
     };
@@ -627,7 +634,12 @@
       const topic = aiTopic.value.trim();
 
       if (!apiKey) return alert('Please enter your OpenRouter API key first.');
-      if (!topic && loadedReferenceFiles.length === 0) return alert('Please provide either a prompt topic statement or reference study files.');
+      if (!topic && attachedTextFiles.length === 0) return alert('Please offer a topic title prompt or insert reference document files.');
+      
+      // Guard against common user selection pitfalls (e.g. attempting to run embedding pipelines via chat completions)
+      if (model.includes("embedding")) {
+        return alert(`Failed to generate quiz from OpenRouter:\n"${model}" is an embedding model and cannot be used with the chat/completions endpoint. Please provide a supported text generation model ID instead.`);
+      }
 
       // Persist values locally for convenience
       localStorage.setItem('openrouter_key', apiKey);
@@ -809,7 +821,7 @@ textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3
 .correct-answer::before { content: "✓"; position: absolute; left: 0; }
 .example { margin-top: 12px; padding: 14px; background: rgba(0, 0, 0, 0.03); border-radius: 10px; font-style: italic; }
 
-/* FIX: This pseudo-class rule ensures card styles only paint onto active text layouts */
+/* FIX: Hide the empty layout node background card until an active status message is rendered */
 #score:not(:empty) { 
   background: var(--card); 
   border: 1px solid var(--border); 
@@ -822,7 +834,7 @@ textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3
 @media (max-width: 600px) { .top { flex-direction: column; align-items: flex-start; } .card { padding: 18px; } }
 </style>
 </head>
-<body class="\${preferDark ? 'dark' : ''}">
+<body class="\安排{\${preferDark ? 'dark' : ''}}">
   <div class="wrap">
     <div class="top" style="margin-bottom:10px">
       <h2 style="margin:0">\${escapeHtml(title)}</h2>
@@ -1020,19 +1032,20 @@ textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3
       const mcqs = parseInt(mcqCount.value) || 0;
       const frqs = parseInt(frqCount.value) || 0;
 
-      let promptStr = `Create a quiz`;
+      let promptStr = "";
+      
       if (topic) {
-        promptStr += ` about: ${topic}\n`;
+        promptStr += `Create a quiz about: ${topic}\n\n`;
       } else {
-        promptStr += ` based on the uploaded reference documents below.\n`;
+        promptStr += `Create a quiz based on the source documents attached below.\n\n`;
       }
 
-      // Check if uploaded reference files exist and append text block details
-      if (loadedReferenceFiles.length > 0) {
-        promptStr += `\nUse the following user-provided material as a structural and topical guideline to base the questions on:\n`;
-        loadedReferenceFiles.forEach(file => {
-          promptStr += `--- START OF REFERENCE FILE: ${file.name} ---\n${file.content}\n--- END OF REFERENCE FILE: ${file.name} ---\n\n`;
+      if (attachedTextFiles.length > 0) {
+        promptStr += `Use the context extracted from the following files as reference source material to inform and verify the contents of the quiz questions:\n`;
+        attachedTextFiles.forEach(file => {
+          promptStr += `\n--- START OF REFERENCE FILE: ${file.name} ---\n${file.text}\n--- END OF REFERENCE FILE: ${file.name} ---\n`;
         });
+        promptStr += `\n`;
       }
 
       promptStr += `You must respond with ONLY a JSON object in exactly this format:
