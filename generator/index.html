@@ -295,6 +295,39 @@
       border-radius: 8px;
       margin-bottom: 12px;
     }
+
+    .file-source-section {
+      background: rgba(139, 92, 246, 0.04);
+      border: 1px dashed #8b5cf6;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+
+    .file-chip {
+      display: inline-flex;
+      align-items: center;
+      background: var(--border);
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      gap: 6px;
+      margin-top: 4px;
+      margin-right: 4px;
+    }
+
+    .file-chip button {
+      padding: 0;
+      background: none;
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .file-chip button:hover {
+      color: var(--text);
+    }
   </style>
 </head>
 
@@ -303,7 +336,7 @@
     <header>
       <div>
         <h1>Quiz Generator</h1>
-        <div class="muted">Create MCQs and FRQs automatically via OpenRouter or build them manually.</div>
+        <div class="muted">Create MCQs and FRQs automatically or manually.</div>
       </div>
       <div class="controls">
         <label class="topbar"><input type="checkbox" id="darkToggle"> Dark</label>
@@ -325,6 +358,12 @@
             <input type="password" id="apiKey" placeholder="jkdfls" style="margin-bottom:6px;">
             <label style="display:block;margin-bottom:4px;font-weight:600;">Model ID:</label>
             <input type="text" id="modelId" value="meta-llama/llama-3.3-70b-instruct" placeholder="meta-llama/llama-3.3-70b-instruct">
+          </div>
+
+          <div class="file-source-section">
+            <label style="display:block;margin-bottom:4px;font-weight:600;color:#8b5cf6;">Reference Files for AI:</label>
+            <input type="file" id="aiSourceFiles" multiple style="margin-bottom:4px;font-size:0.9rem;">
+            <div id="fileChipsContainer"></div>
           </div>
 
           <div style="margin-bottom:8px">
@@ -357,6 +396,11 @@
             </div>
      
             <label style="display:block;margin-top:6px"><input type="checkbox" id="aiFull" checked> Generate full details (e.g., complex details/model answers)</label>
+          </div>
+
+          <div style="margin: 12px 0; border-top:1px solid var(--border); padding-top:10px;">
+            <label style="display:block;margin-bottom:4px;font-size:0.9rem" class="muted">Load/Import Existing Quiz Structure (.json):</label>
+            <input type="file" id="importJsonBtn" accept=".json" style="font-size:0.85rem">
           </div>
           
           <div style="display:flex;gap:8px;margin-top:12px;border-top:1px solid var(--border);padding-top:10px;">
@@ -424,6 +468,8 @@
 
     // State
     const state = { questions: [], selected: -1, dark: false };
+    // Track reference documents loaded for context pipeline inclusion
+    let loadedReferenceFiles = [];
     
     // Elements
     const qList = document.getElementById('qList');
@@ -458,6 +504,11 @@
     const shuffleChoices = document.getElementById('shuffleChoices');
     const includeFrqExamples = document.getElementById('includeFrqExamples');
     
+    // AI Reference Files Elements
+    const aiSourceFilesInput = document.getElementById('aiSourceFiles');
+    const fileChipsContainer = document.getElementById('fileChipsContainer');
+    const importJsonBtn = document.getElementById('importJsonBtn');
+
     // API Specific Elements
     const apiKeyInput = document.getElementById('apiKey');
     const modelIdInput = document.getElementById('modelId');
@@ -466,6 +517,63 @@
     // Load API settings from localStorage if available
     if(localStorage.getItem('openrouter_key')) apiKeyInput.value = localStorage.getItem('openrouter_key');
     if(localStorage.getItem('openrouter_model')) modelIdInput.value = localStorage.getItem('openrouter_model');
+
+    // Handle JSON Structure Imports
+    importJsonBtn.onchange = (e) => {
+      const file = e.target.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        importQuizData(evt.target.result);
+        importJsonBtn.value = '';
+      };
+      reader.readAsText(file);
+    };
+
+    // Process uploaded file texts to feed to the AI context pipeline
+    aiSourceFilesInput.onchange = async (e) => {
+      const files = Array.from(e.target.files);
+      for (let file of files) {
+        // Prevent matching duplicates
+        if (loadedReferenceFiles.some(f => f.name === file.name && f.size === file.size)) continue;
+        
+        try {
+          const textContent = await readFileAsText(file);
+          loadedReferenceFiles.push({
+            name: file.name,
+            size: file.size,
+            content: textContent
+          });
+        } catch (err) {
+          alert(`Error reading reference file "${file.name}": ${err.message}`);
+        }
+      }
+      renderFileChips();
+      aiSourceFilesInput.value = ''; // Reset input element state trigger
+    };
+
+    function readFileAsText(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = (e) => reject(new Error("File processing error"));
+        reader.readAsText(file);
+      });
+    }
+
+    function renderFileChips() {
+      fileChipsContainer.innerHTML = '';
+      loadedReferenceFiles.forEach((file, index) => {
+        const chip = document.createElement('div');
+        chip.className = 'file-chip';
+        chip.innerHTML = `<span>📄 ${escapeHtml(file.name)}</span><button data-idx="${index}">✕</button>`;
+        chip.querySelector('button').onclick = () => {
+          loadedReferenceFiles.splice(index, 1);
+          renderFileChips();
+        };
+        fileChipsContainer.appendChild(chip);
+      });
+    }
 
     function renderList() {
       qList.innerHTML = '';
@@ -507,7 +615,7 @@
 
     showPrompt.onclick = () => {
       const topic = aiTopic.value.trim();
-      if (!topic) return alert('Please enter a topic first');
+      if (!topic && loadedReferenceFiles.length === 0) return alert('Please enter a topic or upload source files first.');
       promptText.value = generatePrompt(topic, aiFull.checked);
       promptSection.style.display = 'block';
     };
@@ -519,7 +627,7 @@
       const topic = aiTopic.value.trim();
 
       if (!apiKey) return alert('Please enter your OpenRouter API key first.');
-      if (!topic) return alert('Please enter a topic for the quiz.');
+      if (!topic && loadedReferenceFiles.length === 0) return alert('Please provide either a prompt topic statement or reference study files.');
 
       // Persist values locally for convenience
       localStorage.setItem('openrouter_key', apiKey);
@@ -638,7 +746,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>${escapeHtml(title)}</title>
+<title>\${escapeHtml(title)}</title>
 <style>
 :root {
   --bg: #f5f7fb;
@@ -700,28 +808,37 @@ textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3
 .correct-answer { color: var(--correct-text); font-weight: 600; position: relative; padding-left: 22px; }
 .correct-answer::before { content: "✓"; position: absolute; left: 0; }
 .example { margin-top: 12px; padding: 14px; background: rgba(0, 0, 0, 0.03); border-radius: 10px; font-style: italic; }
-#score { background: var(--card); border: 1px solid var(--border); padding: 14px; border-radius: var(--radius); box-shadow: var(--shadow); }
+
+/* FIX: This pseudo-class rule ensures card styles only paint onto active text layouts */
+#score:not(:empty) { 
+  background: var(--card); 
+  border: 1px solid var(--border); 
+  padding: 14px; 
+  border-radius: var(--radius); 
+  box-shadow: var(--shadow); 
+}
+
 .muted { color: var(--muted); }
 @media (max-width: 600px) { .top { flex-direction: column; align-items: flex-start; } .card { padding: 18px; } }
 </style>
 </head>
-<body class="${preferDark ? 'dark' : ''}">
+<body class="\${preferDark ? 'dark' : ''}">
   <div class="wrap">
     <div class="top" style="margin-bottom:10px">
-      <h2 style="margin:0">${escapeHtml(title)}</h2>
+      <h2 style="margin:0">\${escapeHtml(title)}</h2>
       <div>
         <label><input id="darkToggle" type="checkbox"> Dark</label>
         <button id="viewAnswers" class="secondary">View Answers</button>
       </div>
     </div>
     <div id="quiz" class="card"></div>
-    <div style="margin-top:12px;display:flex;gap:8px">
+    <div style="margin-top:12px;display:flex;gap:8px;align-items:center;">
       <button id="submitBtn" class="accent">Submit</button>
       <div id="score" class="muted"></div>
     </div>
   </div>
   <script>
-    const questions = ${data};
+    const questions = \${data};
     const quiz = document.getElementById('quiz');
     const scoreDiv = document.getElementById('score');
     const submitBtn = document.getElementById('submitBtn');
@@ -903,9 +1020,22 @@ textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3
       const mcqs = parseInt(mcqCount.value) || 0;
       const frqs = parseInt(frqCount.value) || 0;
 
-      return `Create a quiz about: ${topic}
+      let promptStr = `Create a quiz`;
+      if (topic) {
+        promptStr += ` about: ${topic}\n`;
+      } else {
+        promptStr += ` based on the uploaded reference documents below.\n`;
+      }
 
-You must respond with ONLY a JSON object in exactly this format:
+      // Check if uploaded reference files exist and append text block details
+      if (loadedReferenceFiles.length > 0) {
+        promptStr += `\nUse the following user-provided material as a structural and topical guideline to base the questions on:\n`;
+        loadedReferenceFiles.forEach(file => {
+          promptStr += `--- START OF REFERENCE FILE: ${file.name} ---\n${file.content}\n--- END OF REFERENCE FILE: ${file.name} ---\n\n`;
+        });
+      }
+
+      promptStr += `You must respond with ONLY a JSON object in exactly this format:
 {
   "title": "Quiz title here",
   "questions": [
@@ -937,6 +1067,8 @@ Requirements:
 7. If the user responds a prompt that you are unable to fulfill, respond with a placeholder question, not with something that would invalidate the json.
 
 Remember: Your entire response must be a valid JSON object that can be parsed with JSON.parse().`;
+
+      return promptStr;
     }
 
     hidePrompt.onclick = () => { promptSection.style.display = 'none'; };
