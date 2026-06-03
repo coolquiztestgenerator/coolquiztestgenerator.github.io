@@ -295,49 +295,6 @@
       border-radius: 8px;
       margin-bottom: 12px;
     }
-
-    .import-section {
-      background: rgba(139, 92, 246, 0.04);
-      border: 1px dashed #8b5cf6;
-      padding: 12px;
-      border-radius: 8px;
-      margin-bottom: 12px;
-    }
-
-    .chip-container {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 8px;
-    }
-
-    .file-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: var(--border);
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-size: 0.85rem;
-    }
-
-    .file-chip span {
-      max-width: 160px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .file-chip button {
-      padding: 0 4px;
-      background: transparent;
-      color: var(--muted);
-      font-size: 0.8rem;
-    }
-
-    .file-chip button:hover {
-      color: #ef4444;
-    }
   </style>
 </head>
 
@@ -370,24 +327,9 @@
             <input type="text" id="modelId" value="meta-llama/llama-3.3-70b-instruct" placeholder="meta-llama/llama-3.3-70b-instruct">
           </div>
 
-          <div class="import-section">
-            <div style="font-weight:600;margin-bottom:4px;color:#8b5cf6;">Reference Source Materials:</div>
-            <div style="display:grid;grid-template-columns: 1fr 1fr;gap:8px;align-items:start;">
-              <div>
-                <label style="font-size:0.8rem;" class="muted">Import Files for AI</label>
-                <input type="file" id="aiContextFiles" multiple style="font-size:0.8rem;margin-top:4px;">
-              </div>
-              <div>
-                <label style="font-size:0.8rem;" class="muted">Load Pre-built Quiz Structure (.json)</label>
-                <input type="file" id="importJsonBtn" accept=".json" style="font-size:0.8rem;margin-top:4px;">
-              </div>
-            </div>
-            <div id="fileChips" class="chip-container"></div>
-          </div>
-
           <div style="margin-bottom:8px">
             <div class="row" style="gap:8px;margin-bottom:6px">
-              <input type="text" id="aiTopic" placeholder="Enter a topic and/or supplementary instructions (e.g., 'Basic calculus', 'Mitosis review')" style="flex:1">
+              <input type="text" id="aiTopic" placeholder="Enter a topic and/or other details (e.g., 'Basic algebra', 'World War 2')" style="flex:1">
             </div>
             <div class="row" style="gap:8px;margin-bottom:6px">
               <div class="small" style="flex:1">
@@ -482,7 +424,6 @@
 
     // State
     const state = { questions: [], selected: -1, dark: false };
-    let attachedTextFiles = []; // Stores text loaded from context file imports
     
     // Elements
     const qList = document.getElementById('qList');
@@ -517,11 +458,6 @@
     const shuffleChoices = document.getElementById('shuffleChoices');
     const includeFrqExamples = document.getElementById('includeFrqExamples');
     
-    // Core Multi-Importer Elements
-    const aiContextFiles = document.getElementById('aiContextFiles');
-    const importJsonBtn = document.getElementById('importJsonBtn');
-    const fileChips = document.getElementById('fileChips');
-
     // API Specific Elements
     const apiKeyInput = document.getElementById('apiKey');
     const modelIdInput = document.getElementById('modelId');
@@ -530,57 +466,6 @@
     // Load API settings from localStorage if available
     if(localStorage.getItem('openrouter_key')) apiKeyInput.value = localStorage.getItem('openrouter_key');
     if(localStorage.getItem('openrouter_model')) modelIdInput.value = localStorage.getItem('openrouter_model');
-
-    // Handle Local Quiz Layout Data Schema Import (.json)
-    importJsonBtn.onchange = (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        importQuizData(evt.target.result);
-        importJsonBtn.value = ""; 
-      };
-      reader.readAsText(file);
-    };
-
-    // Handle AI Document Context Source File Import (.txt, .md, etc.)
-    aiContextFiles.onchange = async (e) => {
-      const files = Array.from(e.target.files);
-      for (let file of files) {
-        if (attachedTextFiles.some(f => f.name === file.name && f.size === file.size)) continue;
-        try {
-          const content = await readBlobAsText(file);
-          attachedTextFiles.push({ name: file.name, size: file.size, text: content });
-        } catch (err) {
-          alert(`Error reading file "${file.name}": ${err.message}`);
-        }
-      }
-      renderFileChips();
-      aiContextFiles.value = ""; 
-    };
-
-    function readBlobAsText(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.onerror = () => reject(new Error("Unable to parse text file"));
-        reader.readAsText(file);
-      });
-    }
-
-    function renderFileChips() {
-      fileChips.innerHTML = "";
-      attachedTextFiles.forEach((file, index) => {
-        const chip = document.createElement('div');
-        chip.className = 'file-chip';
-        chip.innerHTML = `<span>📄 ${escapeHtml(file.name)}</span><button data-idx="${index}">✕</button>`;
-        chip.querySelector('button').onclick = () => {
-          attachedTextFiles.splice(index, 1);
-          renderFileChips();
-        };
-        fileChips.appendChild(chip);
-      });
-    }
 
     function renderList() {
       qList.innerHTML = '';
@@ -622,7 +507,7 @@
 
     showPrompt.onclick = () => {
       const topic = aiTopic.value.trim();
-      if (!topic && attachedTextFiles.length === 0) return alert('Please enter a topic or upload context documents first.');
+      if (!topic) return alert('Please enter a topic first');
       promptText.value = generatePrompt(topic, aiFull.checked);
       promptSection.style.display = 'block';
     };
@@ -634,12 +519,7 @@
       const topic = aiTopic.value.trim();
 
       if (!apiKey) return alert('Please enter your OpenRouter API key first.');
-      if (!topic && attachedTextFiles.length === 0) return alert('Please offer a topic title prompt or insert reference document files.');
-      
-      // Guard against common user selection pitfalls (e.g. attempting to run embedding pipelines via chat completions)
-      if (model.includes("embedding")) {
-        return alert(`Failed to generate quiz from OpenRouter:\n"${model}" is an embedding model and cannot be used with the chat/completions endpoint. Please provide a supported text generation model ID instead.`);
-      }
+      if (!topic) return alert('Please enter a topic for the quiz.');
 
       // Persist values locally for convenience
       localStorage.setItem('openrouter_key', apiKey);
@@ -753,14 +633,12 @@
       }
 
       const data = JSON.stringify(qcopy).replace(/</g, '\\u003c');
-      const bodyClass = preferDark ? 'dark' : '';
-
       return `<!doctype html>
 <html>
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>\${escapeHtml(title)}</title>
+<title>${escapeHtml(title)}</title>
 <style>
 :root {
   --bg: #f5f7fb;
@@ -822,30 +700,22 @@ textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3
 .correct-answer { color: var(--correct-text); font-weight: 600; position: relative; padding-left: 22px; }
 .correct-answer::before { content: "✓"; position: absolute; left: 0; }
 .example { margin-top: 12px; padding: 14px; background: rgba(0, 0, 0, 0.03); border-radius: 10px; font-style: italic; }
-
-#score:not(:empty) { 
-  background: var(--card); 
-  border: 1px solid var(--border); 
-  padding: 14px; 
-  border-radius: var(--radius); 
-  box-shadow: var(--shadow); 
-}
-
+#score { background: var(--card); border: 1px solid var(--border); padding: 14px; border-radius: var(--radius); box-shadow: var(--shadow); }
 .muted { color: var(--muted); }
 @media (max-width: 600px) { .top { flex-direction: column; align-items: flex-start; } .card { padding: 18px; } }
 </style>
 </head>
-<body class="${bodyClass}">
+<body class="${preferDark ? 'dark' : ''}">
   <div class="wrap">
     <div class="top" style="margin-bottom:10px">
-      <h2 style="margin:0">\${escapeHtml(title)}</h2>
+      <h2 style="margin:0">${escapeHtml(title)}</h2>
       <div>
         <label><input id="darkToggle" type="checkbox"> Dark</label>
         <button id="viewAnswers" class="secondary">View Answers</button>
       </div>
     </div>
     <div id="quiz" class="card"></div>
-    <div style="margin-top:12px;display:flex;gap:8px;align-items:center;">
+    <div style="margin-top:12px;display:flex;gap:8px">
       <button id="submitBtn" class="accent">Submit</button>
       <div id="score" class="muted"></div>
     </div>
@@ -969,4 +839,118 @@ textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3
         if (q.type === 'frq') {
           q.example = frqExample.value;
         }
-        renderList
+        renderList();
+      }
+    };
+
+    deleteBtn.onclick = () => {
+      if (state.selected >= 0) {
+        state.questions.splice(state.selected, 1);
+        state.selected = -1;
+        renderList();
+        editor.style.display = 'none';
+        editorEmpty.style.display = 'block';
+      }
+    };
+
+    addOption.onclick = () => {
+      const q = state.questions[state.selected];
+      if (q && q.type === 'mcq') {
+        q.choices.push('New option');
+        renderOptions(q);
+        rebuildCorrectSelect(q);
+      }
+    };
+
+    downloadBtn.onclick = () => {
+      if (!state.questions.length) return alert('Add some questions first!');
+      const html = buildQuizHTML(state.questions, darkToggle.checked, {
+        title: quizTitle.value || 'Quiz',
+        shuffleQuestions: shuffleQs.checked,
+        shuffleChoices: shuffleChoices.checked,
+        includeFrqExamples: includeFrqExamples.checked
+      });
+      const blob = new Blob([html], { type: 'text/html' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${quizTitle.value || 'quiz'}.html`;
+      a.click();
+    };
+
+    darkToggle.onchange = () => document.body.classList.toggle('dark', darkToggle.checked);
+
+    function rebuildCorrectSelect(q) {
+      if (!q || q.type !== 'mcq') return;
+      correctIndex.innerHTML = '';
+      q.choices.forEach((opt, i) => {
+        const el = document.createElement('option');
+        el.value = i;
+        el.textContent = String.fromCharCode(65 + i) + '. ' + opt;
+        if (i === q.correctIndex) el.selected = true;
+        correctIndex.appendChild(el);
+      });
+      correctIndex.onchange = () => q.correctIndex = parseInt(correctIndex.value, 10);
+    }
+
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+    function generatePrompt(topic, full) {
+      const mcqs = parseInt(mcqCount.value) || 0;
+      const frqs = parseInt(frqCount.value) || 0;
+
+      return `Create a quiz about: ${topic}
+
+You must respond with ONLY a JSON object in exactly this format:
+{
+  "title": "Quiz title here",
+  "questions": [
+    {
+      "type": "mcq",
+      "text": "Your multiple choice question",
+      "choices": ["First option", "Second option", "Third option", "Fourth option"],
+      "correctIndex": 0
+    },
+    {
+      "type": "frq",
+      "text": "Your free response question",
+      "example": "Example answer here"
+    }
+  ]
+}
+
+Required number of questions:
+- Multiple Choice Questions (MCQs): ${mcqs}
+- Free Response Questions (FRQs): ${frqs}
+
+Requirements:
+1. Generate exactly the amount the person wants: no more, and especially no less, though within questions, there can be 1 to infinite options, so you do not need to do 4 exactly.
+2. Make questions clear, educational, and challenging.
+3. For MCQs, ensure one answer is clearly correct.
+4. ${full ? 'Include detailed example answers for FRQs' : 'Keep example answers brief'}
+5. Return ONLY the JSON object - no other text wrapper outside markdown if any, prefer naked JSON string.
+6. DO NOT return invalid json, it also must not use LaTeX, and be usable with raw data reading.
+7. If the user responds a prompt that you are unable to fulfill, respond with a placeholder question, not with something that would invalidate the json.
+
+Remember: Your entire response must be a valid JSON object that can be parsed with JSON.parse().`;
+    }
+
+    hidePrompt.onclick = () => { promptSection.style.display = 'none'; };
+    
+    copyPrompt.onclick = async () => {
+      await navigator.clipboard.writeText(promptText.value);
+      const oldText = copyPrompt.textContent;
+      copyPrompt.textContent = 'Copied!';
+      setTimeout(() => copyPrompt.textContent = oldText, 1500);
+    };
+
+    // Init
+    renderList();
+  </script>
+</body>
+
+</html>
