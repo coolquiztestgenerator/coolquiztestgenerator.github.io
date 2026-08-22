@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aperiodic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0B0D12; --surface: #12151D; --line: rgba(231,229,222,0.08);
+    --text: #E7E5DE; --muted: #7C8291;
+    --lead: #8FE3D3; --counter: #D9A15B; --bass: #7C93C7;
+    --arp: #9ED68C; --perc: #B8BCC4; --sparkle: #C7A5E0;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; height:100%;
+    background-color: #161A24;
+    color: var(--text); font-family: sans-serif; }
+  .mono{ font-family: sans-serif; }
+  .wrap{ max-width: 640px; margin: 40px auto; padding: 0 16px; }
+  .panel{ background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .controls{ display:flex; align-items:center; gap: 16px; padding: 16px 18px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  button#playBtn{
+    appearance:none; border:1px solid var(--lead); background:transparent; color: var(--lead);
+    font-family: sans-serif; font-size:13px; letter-spacing:0.06em; text-transform:uppercase;
+    padding: 10px 18px; border-radius: 999px; cursor:pointer; transition: background 0.15s ease, color 0.15s ease; }
+  button#playBtn:hover{ background: var(--lead); color: #0B0D12; }
+  button#playBtn:focus-visible{ outline: 2px solid var(--lead); outline-offset: 3px; }
+  button#playBtn.playing{ background: var(--lead); color:#0B0D12; }
+  .slider{ display:flex; align-items:center; gap:8px; color: var(--muted); font-size:12px; }
+  .slider input[type=range]{ accent-color: var(--lead); width: 100px; }
+  .elapsed{ margin-left:auto; color: var(--muted); font-size: 12px; }
+  canvas#ribbon{ display:block; width:100%; height: 340px; background: #0D1017; }
+  .legend{ display:flex; gap:16px; padding: 10px 18px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--muted); flex-wrap:wrap; }
+  .legend span.dot{ display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:6px; }
+  .legend .lead .dot{ background: var(--lead); } .legend .counter .dot{ background: var(--counter); }
+  .legend .bass .dot{ background: var(--bass); } .legend .arp .dot{ background: var(--arp); }
+  .legend .perc .dot{ background: var(--perc); } .legend .sparkle .dot{ background: var(--sparkle); }
+  .status{ padding: 10px 18px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--muted); font-family:'IBM Plex Mono', monospace; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="panel">
+    <div class="controls">
+      <button id="playBtn">▶ Play</button>
+      <div class="slider"><span>vol</span><input id="volSlider" type="range" min="0" max="1" step="0.01" value="0.7"></div>
+      <div class="slider"><span>complexity</span><input id="complexitySlider" type="range" min="0" max="1" step="0.01" value="0.35"></div>
+      <div class="elapsed mono" id="elapsed">00:00</div>
+    </div>
+    <canvas id="ribbon"></canvas>
+    <div class="legend">
+      <span class="lead"><span class="dot"></span>lead</span>
+      <span class="counter"><span class="dot"></span>counter</span>
+      <span class="bass"><span class="dot"></span>bass</span>
+      <span class="arp"><span class="dot"></span>arp</span>
+      <span class="perc"><span class="dot"></span>perc</span>
+      <span class="sparkle"><span class="dot"></span>sparkle</span>
+    </div>
+    <div class="status mono" id="eviStatus">—</div>
+  </div>
+</div>
+
+<script>
+const CONFIG = {
+  masterVolume: 0.7,
+  bpm: 64,
+  root: 220, // Hz (A3)
+
+  harmony: {
+    substitution: { A: ['A','B'], B: ['A','C'], C: ['A'] },
+    start: 'A',
+    chordDegreeMap: { A: 0, B: 5, C: 3 }, // i, vi, iv
+  },
+
+  voices: {
+    lead: {
+      enabled: true,
+      substitution: { A: ['A','B'], B: ['A','C'], C: ['A'] },
+      start: 'A', beatScale: 1, wave: 'triangle', gain: 0.5, filterHz: 2400, pan: -0.15,
+      tiles: {
+        A: [ [ {tone:0,oct:0,dur:1,vel:.85}, {tone:1,oct:0,dur:.5,vel:.6}, {tone:2,oct:0,dur:.5,vel:.7} ],
+             [ {tone:0,oct:0,dur:.5,vel:.8}, {tone:2,oct:0,dur:.25,vel:.55}, {tone:1,oct:1,dur:.25,vel:.5}, {tone:3,oct:0,dur:1,vel:.65} ] ],
+        B: [ [ {tone:2,oct:0,dur:1.5,vel:.75}, {tone:1,oct:0,dur:.5,vel:.55} ],
+             [ {tone:3,oct:0,dur:.75,vel:.7}, {tone:2,oct:0,dur:.25,vel:.5}, {tone:0,oct:1,dur:.5,vel:.6} ] ],
+        C: [ [ {tone:3,oct:0,dur:1,vel:.65}, {tone:1,oct:0,dur:1,vel:.5} ],
+             [ {tone:4,oct:0,dur:.75,vel:.7}, {tone:2,oct:0,dur:.75,vel:.55} ] ],
+      },
+    },
+    counter: {
+      enabled: true,
+      substitution: { A: ['A','B','A'], B: ['B','B'] },
+      start: 'A', beatScale: 2, wave: 'sine', gain: 0.35, filterHz: 1000, pan: 0.2,
+      tiles: {
+        A: [ [ {tone:0,oct:-1,dur:2,vel:.5} ], [ {tone:2,oct:-1,dur:1.5,vel:.45}, {tone:0,oct:-1,dur:.5,vel:.4} ] ],
+        B: [ [ {tone:1,oct:-1,dur:1,vel:.4}, {tone:0,oct:-1,dur:1,vel:.35} ], [ {tone:3,oct:-1,dur:2,vel:.4} ] ],
+      },
+    },
+    bass: {
+      enabled: true,
+      substitution: { A: ['A','B'], B: ['A'] },
+      start: 'A', beatScale: 1.5, wave: 'sine', gain: 0.5, filterHz: 500, pan: 0,
+      tiles: {
+        A: [ [ {tone:0,oct:-2,dur:4,vel:.55} ] ],
+        B: [ [ {tone:2,oct:-2,dur:4,vel:.5} ] ],
+      },
+    },
+    arp: {
+      enabled: true, complexityOnset: 0.2, complexityRamp: 0.35,
+      substitution: { A: ['A','B','C'], B: ['A','C'], C: ['B'] },
+      start: 'A', beatScale: 0.5, wave: 'triangle', gain: 0.28, filterHz: 3000, pan: -0.3,
+      tiles: {
+        A: [ [ {tone:0,oct:1,dur:.5,vel:.4} ] ],
+        B: [ [ {tone:1,oct:1,dur:.5,vel:.35} ] ],
+        C: [ [ {tone:2,oct:1,dur:.5,vel:.4}, {tone:3,oct:1,dur:.5,vel:.3} ] ],
+      },
+    },
+    perc: {
+      enabled: true, percussion: true, complexityOnset: 0.45, complexityRamp: 0.3,
+      substitution: { A: ['A','B'], B: ['A','A','B'] },
+      start: 'A', beatScale: 0.5, gain: 0.45, pan: 0.3,
+      tiles: {
+        A: [ [ {accent:1,dur:.5,vel:.5} ], [ {accent:1,dur:.25,vel:.4}, {accent:1,dur:.25,vel:.3} ] ],
+        B: [ [ {accent:0,dur:1,vel:.6} ], [ {accent:0,dur:.5,vel:.5}, {accent:1,dur:.5,vel:.35} ] ],
+      },
+    },
+    sparkle: {
+      enabled: true, complexityOnset: 0.6, complexityRamp: 0.3,
+      substitution: { A: ['A','A','B'], B: ['B','A'] },
+      start: 'A', beatScale: 0.5, wave: 'sine', gain: 0.35, filterHz: 4200, pan: 0.1,
+      tiles: {
+        A: [ [ {tone:2,oct:1,dur:.5,vel:.5} ], [ {tone:4,oct:1,dur:.5,vel:.45} ] ],
+        B: [ [ {tone:3,oct:1,dur:.25,vel:.4}, {tone:1,oct:1,dur:.25,vel:.35} ], [ {tone:0,oct:2,dur:.5,vel:.4} ] ],
+      },
+    },
+  },
+
+  pad: {
+    enabled: true, gain: 0.15, wave: 'sawtooth', filterHz: 650,
+    // pedal tone
+    layers: [ { semis: 0, lfoPeriodSec: 19.7 }, { semis: 7, lfoPeriodSec: 23.3 },
+              { semis: 12, lfoPeriodSec: 29.9 }, { semis: 15, lfoPeriodSec: 37.1 } ],
+  },
+
+  synth: {
+    attack: 0.02, release: 0.35,
+    reverbSeconds: 3.2, reverbMix: 0.26,
+    delayTime: 0.42, delayFeedback: 0.32, delayMix: 0.2,
+  },
+
+  humanize: { timingJitterSec: 0.012, velocityJitter: 0.08 },
+
+  evolution: {
+    scalePalette: [
+      [0,2,3,5,7,8,10], [0,2,3,5,7,9,10], [0,1,3,5,7,8,10], [0,2,4,6,7,9,11],
+    ],
+    scaleNames: ['minor', 'dorian', 'phrygian', 'lydian'],
+    scaleMorphPeriodSec: 240,
+    keyDriftSemis: 4,
+    keyDriftPeriodsSec: [131, 197, 281],
+    tempoDriftBpm: 5,
+    tempoDriftPeriodsSec: [211, 307],
+    brightnessDriftPeriodsSec: [53, 89, 149],
+    brightnessDepth: 0.35,
+    variantPeriodSec: 47,
+    spacePeriodsSec: [163, 229],
+    spaceDepth: 0.4,
+    dynamicsPeriodsSec: [281, 373],
+    dynamicsDepth: 0.1,
+    presencePeriodsSec: {
+      sparkle: [173, 241, 337],
+      arp: [151, 223, 311],
+      perc: [139, 197, 269],
+    },
+    harmonicRhythmRangeSec: [20, 9], // low complex, high complex
+  },
+};
+
+/* ============================================================================
+   ENGINE
+============================================================================ */
+let complexity = 0.35;
+
+function makeGen(substitution, start) { return { word: [start], pos: 0, substitution }; }
+function nextSymbol(gen) {
+  if (gen.pos >= gen.word.length - 8) {
+    let w = gen.word; const target = gen.pos + 64;
+    while (w.length < target) w = w.flatMap(s => gen.substitution[s]);
+    gen.word = w;
+  }
+  const s = gen.word[gen.pos++];
+  if (gen.pos > 4000) { gen.word = gen.word.slice(gen.pos); gen.pos = 0; }
+  return s;
+}
+
+function quasi(t, periodsSec) {
+  let sum = 0;
+  for (let i = 0; i < periodsSec.length; i++) sum += Math.sin((2 * Math.PI * t) / periodsSec[i] + i * 1.37);
+  return sum / periodsSec.length;
+}
+function smoothstep(x) { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function lerp(a, b, f) { return a + (b - a) * f; }
+
+const EV = CONFIG.evolution;
+const HARM = CONFIG.harmony;
+
+function keyDriftSemisAt(t) { return quasi(t, EV.keyDriftPeriodsSec) * EV.keyDriftSemis; }
+
+function scaleBlendAt(t) {
+  const palette = EV.scalePalette; const n = palette.length;
+  const pos = t / EV.scaleMorphPeriodSec;
+  const i0 = Math.floor(pos) % n, i1 = (i0 + 1) % n;
+  const frac = smoothstep(pos - Math.floor(pos));
+  return { i0, i1, frac };
+}
+
+function freqForDegree(degree, t) {
+  const palette = EV.scalePalette; const len = palette[0].length;
+  const oct = Math.floor(degree / len);
+  const idx = ((degree % len) + len) % len;
+  const { i0, i1, frac } = scaleBlendAt(t);
+  const semisInScale = lerp(palette[i0][idx], palette[i1][idx], frac);
+  const semis = oct * 12 + semisInScale + keyDriftSemisAt(t);
+  return CONFIG.root * Math.pow(2, semis / 12);
+}
+
+function bpmAt(t) { return CONFIG.bpm + quasi(t, EV.tempoDriftPeriodsSec) * EV.tempoDriftBpm; }
+function secondsPerBeatAt(t) { return 60 / bpmAt(t); }
+function brightnessMultAt(t) { return 1 + quasi(t, EV.brightnessDriftPeriodsSec) * EV.brightnessDepth; }
+
+function variantIndexAt(voiceKey, t, numVariants) {
+  if (numVariants <= 1) return 0;
+  const unlocked = clamp(1 + Math.round(complexity * (numVariants - 1)), 1, numVariants);
+  if (unlocked <= 1) return 0;
+  const p = EV.variantPeriodSec * (1 + (voiceKey.length % 3) * 0.13);
+  const v = quasi(t, [p, p * 1.61803]) * 0.5 + 0.5;
+  return clamp(Math.floor(v * unlocked), 0, unlocked - 1);
+}
+
+function presenceAt(voiceKey, t) {
+  const periods = EV.presencePeriodsSec[voiceKey];
+  if (!periods) return 1;
+  return smoothstep(quasi(t, periods) * 0.5 + 0.5);
+}
+
+function complexityGateFor(cfg) {
+  if (cfg.complexityOnset === undefined) return 1;
+  return smoothstep((complexity - cfg.complexityOnset) / cfg.complexityRamp);
+}
+
+// ---- harmony: chord progression is itself an aperiodic sequence -----------
+const harmonyState = { gen: makeGen(HARM.substitution, HARM.start), seq: [] };
+function chordSymbolAtIndex(idx) {
+  while (harmonyState.seq.length <= idx) harmonyState.seq.push(nextSymbol(harmonyState.gen));
+  return harmonyState.seq[idx];
+}
+function harmonicRhythmSec() { return lerp(EV.harmonicRhythmRangeSec[0], EV.harmonicRhythmRangeSec[1], complexity); }
+function chordRootDegreeAt(t) {
+  const idx = Math.max(0, Math.floor(t / harmonicRhythmSec()));
+  return HARM.chordDegreeMap[chordSymbolAtIndex(idx)];
+}
+function currentChordToneSteps() {
+  if (complexity < 0.34) return [0, 2, 4];
+  if (complexity < 0.7) return [0, 2, 4, 6];
+  return [0, 2, 4, 6, 8];
+}
+function scaleDegreeForTone(toneIdx, octaveShift, t) {
+  const steps = currentChordToneSteps();
+  const root = chordRootDegreeAt(t);
+  const cycle = Math.floor(toneIdx / steps.length);
+  const within = steps[((toneIdx % steps.length) + steps.length) % steps.length];
+  const len = EV.scalePalette[0].length;
+  return root + within + cycle * len + (octaveShift || 0) * len;
+}
+
+// ---- audio graph ------------------------------------------------------------
+let ctx = null, masterGain, noteBus, delayNode, delayWet, convolver, reverbWet, noiseBuffer;
+let padNodes = [];
+let running = false;
+let audioStartTime = 0, startWallTime = 0;
+let elapsedTimer = null, statusTimer = null, schedulerTimer = null;
+const SCHEDULE_AHEAD = 0.2, LOOKAHEAD_MS = 25;
+
+function buildImpulseResponse(context, seconds) {
+  const rate = context.sampleRate, length = Math.max(1, Math.floor(rate * seconds));
+  const buf = context.createBuffer(2, length, rate);
+  for (let ch = 0; ch < 2; ch++) {
+    const data = buf.getChannelData(ch);
+    for (let i = 0; i < length; i++) { const t = i / length; data[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 2.5); }
+  }
+  return buf;
+}
+function buildNoiseBuffer(context, seconds) {
+  const rate = context.sampleRate, length = Math.floor(rate * seconds);
+  const buf = context.createBuffer(1, length, rate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
+  return buf;
+}
+
+function setupGraph() {
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = ctx.createGain(); masterGain.gain.value = CONFIG.masterVolume; masterGain.connect(ctx.destination);
+  noteBus = ctx.createGain(); noteBus.gain.value = 1; noteBus.connect(masterGain);
+
+  delayNode = ctx.createDelay(5.0); delayNode.delayTime.value = CONFIG.synth.delayTime;
+  const feedback = ctx.createGain(); feedback.gain.value = CONFIG.synth.delayFeedback;
+  delayNode.connect(feedback); feedback.connect(delayNode);
+  delayWet = ctx.createGain(); delayWet.gain.value = CONFIG.synth.delayMix;
+  delayNode.connect(delayWet); delayWet.connect(masterGain);
+  noteBus.connect(delayNode);
+
+  convolver = ctx.createConvolver(); convolver.buffer = buildImpulseResponse(ctx, CONFIG.synth.reverbSeconds);
+  reverbWet = ctx.createGain(); reverbWet.gain.value = CONFIG.synth.reverbMix;
+  convolver.connect(reverbWet); reverbWet.connect(masterGain);
+  noteBus.connect(convolver);
+
+  noiseBuffer = buildNoiseBuffer(ctx, 0.4);
+}
+
+function playNote(voiceCfg, freq, time, durSec, vel, filterHz) {
+  const osc = ctx.createOscillator(); osc.type = voiceCfg.wave; osc.frequency.value = freq;
+  const filter = ctx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = filterHz;
+  const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+  if (panner) panner.pan.value = voiceCfg.pan;
+  const env = ctx.createGain();
+  const peak = clamp(vel * voiceCfg.gain, 0, 1);
+  const { attack, release } = CONFIG.synth;
+  env.gain.setValueAtTime(0, time);
+  env.gain.linearRampToValueAtTime(peak, time + attack);
+  env.gain.setValueAtTime(peak, Math.max(time + attack, time + durSec));
+  env.gain.linearRampToValueAtTime(0, time + durSec + release);
+  osc.connect(filter); filter.connect(env);
+  if (panner) { env.connect(panner); panner.connect(noteBus); } else { env.connect(noteBus); }
+  osc.start(time); osc.stop(time + durSec + release + 0.05);
+}
+
+function playPercNote(cfg, time, durSec, vel, accent) {
+  const src = ctx.createBufferSource(); src.buffer = noiseBuffer;
+  const bp = ctx.createBiquadFilter(); bp.type = 'bandpass';
+  bp.frequency.value = accent ? 5200 : 900; bp.Q.value = 1.1;
+  const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+  if (panner) panner.pan.value = cfg.pan;
+  const env = ctx.createGain();
+  const peak = clamp(vel * cfg.gain, 0, 1);
+  const hitLen = Math.max(0.05, Math.min(durSec, 0.22));
+  env.gain.setValueAtTime(0, time);
+  env.gain.linearRampToValueAtTime(peak, time + 0.002);
+  env.gain.exponentialRampToValueAtTime(0.0008, time + hitLen);
+  src.connect(bp); bp.connect(env);
+  if (panner) { env.connect(panner); panner.connect(noteBus); } else { env.connect(noteBus); }
+  src.start(time); src.stop(time + 0.3);
+}
+
+function tileDurationSeconds(tile, cfg, t) {
+  return tile.reduce((sum, n) => sum + n.dur, 0) * secondsPerBeatAt(t) * cfg.beatScale;
+}
+
+const voiceStates = {};
+function initVoiceStates() {
+  for (const key of Object.keys(CONFIG.voices)) {
+    const cfg = CONFIG.voices[key];
+    if (!cfg.enabled) continue;
+    voiceStates[key] = { cfg, gen: makeGen(cfg.substitution, cfg.start), queue: [], nextTime: ctx.currentTime + 0.1 };
+  }
+}
+
+function scheduleVoice(key) {
+  const v = voiceStates[key]; const cfg = v.cfg;
+  while (v.nextTime < ctx.currentTime + SCHEDULE_AHEAD) {
+    const tElapsed = v.nextTime - audioStartTime;
+    if (v.queue.length === 0) {
+      const sym = nextSymbol(v.gen);
+      const variants = cfg.tiles[sym];
+      const vi = variantIndexAt(key, tElapsed, variants.length);
+      const tile = variants[vi];
+      for (const n of tile) v.queue.push(n);
+      visualizer.pushSymbol(key, sym, v.nextTime, tileDurationSeconds(tile, cfg, tElapsed));
+    }
+    const spec = v.queue.shift();
+    const jitter = (Math.random() * 2 - 1) * CONFIG.humanize.timingJitterSec;
+    const startTime = v.nextTime + jitter;
+    const durSec = spec.dur * secondsPerBeatAt(tElapsed) * cfg.beatScale;
+    const presence = presenceAt(key, tElapsed);
+    const gate = complexityGateFor(cfg);
+    const vel = clamp((spec.vel + (Math.random() * 2 - 1) * CONFIG.humanize.velocityJitter) * presence * gate, 0, 1);
+    if (vel > 0.01) {
+      if (cfg.percussion) {
+        playPercNote(cfg, startTime, durSec, vel, spec.accent);
+      } else {
+        const degree = scaleDegreeForTone(spec.tone, spec.oct, tElapsed);
+        const filterHz = cfg.filterHz * brightnessMultAt(tElapsed);
+        playNote(cfg, freqForDegree(degree, tElapsed), startTime, durSec, vel, filterHz);
+      }
+    }
+    v.nextTime += durSec;
+  }
+}
+function schedulerTick() { for (const key of Object.keys(voiceStates)) scheduleVoice(key); }
+
+function startPad() {
+  if (!CONFIG.pad.enabled) return;
+  const p = CONFIG.pad;
+  for (const layer of p.layers) {
+    const osc = ctx.createOscillator(); osc.type = p.wave;
+    osc.frequency.value = CONFIG.root * Math.pow(2, layer.semis / 12) / 2;
+    const filter = ctx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = p.filterHz;
+    const gain = ctx.createGain(); gain.gain.value = 0;
+    osc.connect(filter); filter.connect(gain); gain.connect(noteBus);
+    osc.start();
+    padNodes.push({ osc, gain, layer, startedAt: ctx.currentTime });
+  }
+  ambientTick();
+}
+function ambientTick() {
+  if (!running) return;
+  const now = ctx.currentTime; const t = now - audioStartTime;
+  for (const node of padNodes) {
+    const phase = ((now - node.startedAt) / node.layer.lfoPeriodSec) * Math.PI * 2;
+    const level = (Math.sin(phase) * 0.5 + 0.5) * CONFIG.pad.gain;
+    node.gain.gain.setTargetAtTime(level, now, 0.5);
+    const freq = CONFIG.root * Math.pow(2, (node.layer.semis + keyDriftSemisAt(t)) / 12) / 2;
+    node.osc.frequency.setTargetAtTime(freq, now, 2.0);
+  }
+  const space = quasi(t, EV.spacePeriodsSec) * EV.spaceDepth;
+  if (reverbWet) reverbWet.gain.setTargetAtTime(CONFIG.synth.reverbMix * (1 + space), now, 1.5);
+  if (delayWet) delayWet.gain.setTargetAtTime(CONFIG.synth.delayMix * (1 - space * 0.6), now, 1.5);
+  const swell = quasi(t, EV.dynamicsPeriodsSec) * EV.dynamicsDepth;
+  if (masterGain) masterGain.gain.setTargetAtTime(CONFIG.masterVolume * (1 + swell), now, 2.5);
+  requestAnimationFrame(ambientTick);
+}
+function stopPad() {
+  for (const node of padNodes) {
+    try { node.gain.gain.setTargetAtTime(0, ctx.currentTime, 0.1); node.osc.stop(ctx.currentTime + 0.6); } catch (e) {}
+  }
+  padNodes = [];
+}
+
+/* ---- visualizer ------------------------------------------------------- */
+const visualizer = (() => {
+  const canvas = document.getElementById('ribbon');
+  const dctx = canvas.getContext('2d');
+  const voiceKeys = ['lead','counter','bass','arp','perc','sparkle'];
+  let events = {}; voiceKeys.forEach(k => events[k] = []);
+  const pxPerSec = 78;
+  const rowY = { lead:32, counter:82, bass:132, arp:182, perc:232, sparkle:282 };
+  const rowH = 34;
+  const playheadX = 130;
+
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * devicePixelRatio; canvas.height = rect.height * devicePixelRatio;
+    dctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  }
+  window.addEventListener('resize', resize);
+
+  function pushSymbol(voiceKey, sym, time, durSec) {
+    events[voiceKey].push({ sym, time, dur: durSec });
+    if (events[voiceKey].length > 260) events[voiceKey].shift();
+  }
+
+  const colors = {
+    lead: { A:'#8FE3D3', B:'#5FBFAE', C:'#4E7A72' },
+    counter: { A:'#D9A15B', B:'#8A6A3E' },
+    bass: { A:'#7C93C7', B:'#4A5A80' },
+    arp: { A:'#9ED68C', B:'#78B369', C:'#5E8A56' },
+    perc: { A:'#B8BCC4', B:'#7A7E86' },
+    sparkle: { A:'#C7A5E0', B:'#6E5A82' },
+  };
+
+  function draw() {
+    const w = canvas.getBoundingClientRect().width, h = canvas.getBoundingClientRect().height;
+    dctx.clearRect(0, 0, w, h);
+    const now = (ctx && running) ? ctx.currentTime : 0;
+    dctx.strokeStyle = 'rgba(231,229,222,0.15)';
+    dctx.beginPath(); dctx.moveTo(playheadX, 8); dctx.lineTo(playheadX, h - 8); dctx.stroke();
+
+    for (const key of voiceKeys) {
+      const y = rowY[key];
+      for (const ev of events[key]) {
+        const x = playheadX + (ev.time - now) * pxPerSec;
+        const width = Math.max(2, ev.dur * pxPerSec - 3);
+        if (x + width < -20 || x > w + 20) continue;
+        const near = Math.abs(x - playheadX) < 10;
+        dctx.fillStyle = colors[key][ev.sym] || '#888';
+        dctx.globalAlpha = near ? 1 : 0.7;
+        const rh = near ? rowH + 6 : rowH;
+        dctx.fillRect(x, y - rh / 2, width, rh);
+        dctx.globalAlpha = 1;
+      }
+      dctx.fillStyle = 'rgba(231,229,222,0.32)';
+      dctx.font = '10px "IBM Plex Mono", monospace';
+      dctx.fillText(key, 6, y - rowH / 2 - 6);
+    }
+    requestAnimationFrame(draw);
+  }
+  resize(); requestAnimationFrame(draw);
+  return { pushSymbol };
+})();
+
+/* ---- transport / UI ----------------------------------------------------- */
+const playBtn = document.getElementById('playBtn');
+const volSlider = document.getElementById('volSlider');
+const complexitySlider = document.getElementById('complexitySlider');
+const elapsedEl = document.getElementById('elapsed');
+const statusEl = document.getElementById('eviStatus');
+
+function formatElapsed(sec) {
+  const m = Math.floor(sec / 60).toString().padStart(2, '0');
+  const s = Math.floor(sec % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
+}
+
+function updateStatus() {
+  if (!running) return;
+  const t = ctx.currentTime - audioStartTime;
+  const key = keyDriftSemisAt(t);
+  const { i0, i1, frac } = scaleBlendAt(t);
+  const bpm = bpmAt(t);
+  const steps = currentChordToneSteps();
+  const chordType = steps.length <= 3 ? 'triads' : (steps.length === 4 ? '7th chords' : '9th chords');
+  let active = 0;
+  for (const k of Object.keys(CONFIG.voices)) if (complexityGateFor(CONFIG.voices[k]) > 0.05) active++;
+  statusEl.textContent =
+    `key ${key >= 0 ? '+' : ''}${key.toFixed(1)}st · mode ${EV.scaleNames[i0]}→${EV.scaleNames[i1]} ${Math.round(frac * 100)}% · ${bpm.toFixed(0)}bpm · ${chordType} · ${active}/6 voices`;
+}
+
+function start() {
+  if (!ctx) setupGraph();
+  if (ctx.state === 'suspended') ctx.resume();
+  if (masterGain) masterGain.gain.setTargetAtTime(CONFIG.masterVolume, ctx.currentTime, 0.05);
+  audioStartTime = ctx.currentTime;
+  initVoiceStates();
+  running = true;
+  startWallTime = performance.now();
+  schedulerTick();
+  schedulerTimer = setInterval(schedulerTick, LOOKAHEAD_MS);
+  startPad();
+  elapsedTimer = setInterval(() => { elapsedEl.textContent = formatElapsed((performance.now() - startWallTime) / 1000); }, 500);
+  statusTimer = setInterval(updateStatus, 1000);
+  updateStatus();
+  playBtn.textContent = '■ Stop'; playBtn.classList.add('playing');
+}
+function stop() {
+  running = false;
+  clearInterval(schedulerTimer); clearInterval(elapsedTimer); clearInterval(statusTimer);
+  stopPad();
+  if (masterGain) masterGain.gain.setTargetAtTime(0, ctx.currentTime, 0.08);
+  setTimeout(() => { if (ctx) ctx.suspend(); }, 200);
+  playBtn.textContent = '▶ Play'; playBtn.classList.remove('playing');
+}
+playBtn.addEventListener('click', () => { running ? stop() : start(); });
+volSlider.addEventListener('input', () => { CONFIG.masterVolume = parseFloat(volSlider.value); });
+complexitySlider.addEventListener('input', () => { complexity = parseFloat(complexitySlider.value); });
+</script>
+</body>
+</html>
