@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Aperiodic</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg: #0B0D12; --surface: #12151D; --line: rgba(231,229,222,0.08);
@@ -15,21 +15,23 @@
   }
   *{ box-sizing: border-box; }
   html,body{ margin:0; padding:0; height:100%;
-    background-color: #161A24;
-    color: var(--text); font-family: sans-serif; }
-  .mono{ font-family: sans-serif; }
-  .wrap{ max-width: 640px; margin: 40px auto; padding: 0 16px; }
+    background: radial-gradient(1200px 800px at 50% -10%, #161A24 0%, var(--bg) 60%);
+    color: var(--text); font-family: 'Space Grotesk', sans-serif; }
+  .mono{ font-family: 'IBM Plex Mono', monospace; }
+  .wrap{ max-width: 660px; margin: 40px auto; padding: 0 16px; }
   .panel{ background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
-  .controls{ display:flex; align-items:center; gap: 16px; padding: 16px 18px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .controls{ display:flex; align-items:center; gap: 14px; padding: 16px 18px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
   button#playBtn{
     appearance:none; border:1px solid var(--lead); background:transparent; color: var(--lead);
-    font-family: sans-serif; font-size:13px; letter-spacing:0.06em; text-transform:uppercase;
+    font-family:'IBM Plex Mono', monospace; font-size:13px; letter-spacing:0.06em; text-transform:uppercase;
     padding: 10px 18px; border-radius: 999px; cursor:pointer; transition: background 0.15s ease, color 0.15s ease; }
   button#playBtn:hover{ background: var(--lead); color: #0B0D12; }
   button#playBtn:focus-visible{ outline: 2px solid var(--lead); outline-offset: 3px; }
   button#playBtn.playing{ background: var(--lead); color:#0B0D12; }
   .slider{ display:flex; align-items:center; gap:8px; color: var(--muted); font-size:12px; }
-  .slider input[type=range]{ accent-color: var(--lead); width: 100px; }
+  .slider input[type=range]{ accent-color: var(--lead); width: 92px; }
+  .slider select{ background:#0D1017; color:var(--text); border:1px solid var(--line); border-radius:6px;
+    font-family:'IBM Plex Mono', monospace; font-size:12px; padding:5px 6px; }
   .elapsed{ margin-left:auto; color: var(--muted); font-size: 12px; }
   canvas#ribbon{ display:block; width:100%; height: 340px; background: #0D1017; }
   .legend{ display:flex; gap:16px; padding: 10px 18px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--muted); flex-wrap:wrap; }
@@ -45,6 +47,7 @@
   <div class="panel">
     <div class="controls">
       <button id="playBtn">▶ Play</button>
+      <div class="slider"><span>style</span><select id="themeSelect"></select></div>
       <div class="slider"><span>vol</span><input id="volSlider" type="range" min="0" max="1" step="0.01" value="0.7"></div>
       <div class="slider"><span>complexity</span><input id="complexitySlider" type="range" min="0" max="1" step="0.01" value="0.35"></div>
       <div class="elapsed mono" id="elapsed">00:00</div>
@@ -63,15 +66,22 @@
 </div>
 
 <script>
+/* ============================================================================
+   CONFIG — generic engine defaults. Per-theme values below (THEMES array)
+   override root/scale/harmony/instrument/evolution fields at play time; the
+   substitution rules and tile shapes (the actual aperiodic structure) stay
+   shared across themes so every style still runs on the same never-repeating
+   engine, just dressed differently.
+============================================================================ */
 const CONFIG = {
   masterVolume: 0.7,
   bpm: 64,
-  root: 220, // Hz (A3)
+  root: 220,
 
   harmony: {
     substitution: { A: ['A','B'], B: ['A','C'], C: ['A'] },
     start: 'A',
-    chordDegreeMap: { A: 0, B: 5, C: 3 }, // i, vi, iv
+    chordDegreeMap: { A: 0, B: 5, C: 3 },
   },
 
   voices: {
@@ -118,6 +128,7 @@ const CONFIG = {
     },
     perc: {
       enabled: true, percussion: true, complexityOnset: 0.45, complexityRamp: 0.3,
+      hitFreqLow: 900, hitFreqHigh: 5200,
       substitution: { A: ['A','B'], B: ['A','A','B'] },
       start: 'A', beatScale: 0.5, gain: 0.45, pan: 0.3,
       tiles: {
@@ -136,51 +147,127 @@ const CONFIG = {
     },
   },
 
-  pad: {
-    enabled: true, gain: 0.15, wave: 'sawtooth', filterHz: 650,
-    // pedal tone
+  pad: { enabled: true, gain: 0.15, wave: 'sawtooth', filterHz: 650,
     layers: [ { semis: 0, lfoPeriodSec: 19.7 }, { semis: 7, lfoPeriodSec: 23.3 },
-              { semis: 12, lfoPeriodSec: 29.9 }, { semis: 15, lfoPeriodSec: 37.1 } ],
-  },
+              { semis: 12, lfoPeriodSec: 29.9 }, { semis: 15, lfoPeriodSec: 37.1 } ] },
 
-  synth: {
-    attack: 0.02, release: 0.35,
-    reverbSeconds: 3.2, reverbMix: 0.26,
-    delayTime: 0.42, delayFeedback: 0.32, delayMix: 0.2,
-  },
+  synth: { attack: 0.02, release: 0.35, reverbSeconds: 3.2, reverbMix: 0.26,
+           delayTime: 0.42, delayFeedback: 0.32, delayMix: 0.2 },
 
   humanize: { timingJitterSec: 0.012, velocityJitter: 0.08 },
 
+  // fields NOT overridden by themes (structural, engine-level)
   evolution: {
-    scalePalette: [
-      [0,2,3,5,7,8,10], [0,2,3,5,7,9,10], [0,1,3,5,7,8,10], [0,2,4,6,7,9,11],
-    ],
-    scaleNames: ['minor', 'dorian', 'phrygian', 'lydian'],
-    scaleMorphPeriodSec: 240,
-    keyDriftSemis: 4,
-    keyDriftPeriodsSec: [131, 197, 281],
-    tempoDriftBpm: 5,
-    tempoDriftPeriodsSec: [211, 307],
-    brightnessDriftPeriodsSec: [53, 89, 149],
-    brightnessDepth: 0.35,
     variantPeriodSec: 47,
-    spacePeriodsSec: [163, 229],
-    spaceDepth: 0.4,
-    dynamicsPeriodsSec: [281, 373],
-    dynamicsDepth: 0.1,
-    presencePeriodsSec: {
-      sparkle: [173, 241, 337],
-      arp: [151, 223, 311],
-      perc: [139, 197, 269],
-    },
-    harmonicRhythmRangeSec: [20, 9], // low complex, high complex
+    presencePeriodsSec: { sparkle: [173, 241, 337], arp: [151, 223, 311], perc: [139, 197, 269] },
+    // themed fields below get replaced by applyTheme(); present here just as fallback
+    scalePalette: [ [0,2,3,5,7,8,10],[0,2,3,5,7,9,10],[0,1,3,5,7,8,10],[0,2,4,6,7,9,11] ],
+    scaleNames: ['minor','dorian','phrygian','lydian'],
+    scaleMorphPeriodSec: 240, keyDriftSemis: 4, keyDriftPeriodsSec: [131,197,281],
+    tempoDriftBpm: 5, tempoDriftPeriodsSec: [211,307],
+    brightnessDriftPeriodsSec: [53,89,149], brightnessDepth: 0.35,
+    spacePeriodsSec: [163,229], spaceDepth: 0.4,
+    dynamicsPeriodsSec: [281,373], dynamicsDepth: 0.1,
+    harmonicRhythmRangeSec: [20,9],
   },
 };
+
+/* ============================================================================
+   THEMES — different styles/moods. Each overrides root note, scale modes,
+   chord progression, per-voice instrument (waveform/gain/filter/pan), pad
+   texture, reverb/delay character, and evolution pacing. The substitution
+   rules and tile shapes stay the same, so every theme is a different
+   "performance" of the same generative structure.
+============================================================================ */
+const THEMES = [
+  { name: 'Nocturne', root: 220, bpm: 64,
+    scalePalette: [ [0,2,3,5,7,8,10],[0,2,3,5,7,9,10],[0,1,3,5,7,8,10],[0,2,4,6,7,9,11] ],
+    scaleNames: ['minor','dorian','phrygian','lydian'],
+    harmony: { substitution:{A:['A','B'],B:['A','C'],C:['A']}, start:'A', chordDegreeMap:{A:0,B:5,C:3} },
+    voices: {
+      lead:{wave:'triangle',gain:.5,filterHz:2400,pan:-.15},
+      counter:{wave:'sine',gain:.35,filterHz:1000,pan:.2},
+      bass:{wave:'sine',gain:.5,filterHz:500,pan:0},
+      arp:{wave:'triangle',gain:.28,filterHz:3000,pan:-.3,complexityOnset:.2,complexityRamp:.35},
+      perc:{gain:.45,pan:.3,complexityOnset:.45,complexityRamp:.3,hitFreqLow:900,hitFreqHigh:5200},
+      sparkle:{wave:'sine',gain:.35,filterHz:4200,pan:.1,complexityOnset:.6,complexityRamp:.3},
+    },
+    pad:{ wave:'sawtooth', gain:.15, filterHz:650, layers:[{semis:0,lfoPeriodSec:19.7},{semis:7,lfoPeriodSec:23.3},{semis:12,lfoPeriodSec:29.9},{semis:15,lfoPeriodSec:37.1}] },
+    synth:{ attack:.02, release:.35, reverbSeconds:3.2, reverbMix:.26, delayTime:.42, delayFeedback:.32, delayMix:.2 },
+    evolution:{ scaleMorphPeriodSec:240, keyDriftSemis:4, keyDriftPeriodsSec:[131,197,281], tempoDriftBpm:5, tempoDriftPeriodsSec:[211,307], brightnessDriftPeriodsSec:[53,89,149], brightnessDepth:.35, spacePeriodsSec:[163,229], spaceDepth:.4, dynamicsPeriodsSec:[281,373], dynamicsDepth:.1, harmonicRhythmRangeSec:[20,9] },
+  },
+  { name: 'Glass', root: 261.63, bpm: 92,
+    scalePalette: [ [0,2,4,5,7,9,11],[0,2,4,6,7,9,11],[0,2,4,5,7,9,10],[0,2,4,6,8,9,11] ],
+    scaleNames: ['major','lydian','mixolydian','lydian+'],
+    harmony: { substitution:{A:['A','B'],B:['A','C'],C:['A']}, start:'A', chordDegreeMap:{A:0,B:4,C:5} },
+    voices: {
+      lead:{wave:'square',gain:.32,filterHz:3400,pan:-.2},
+      counter:{wave:'triangle',gain:.3,filterHz:1800,pan:.25},
+      bass:{wave:'sine',gain:.45,filterHz:600,pan:0},
+      arp:{wave:'sine',gain:.36,filterHz:5200,pan:-.35,complexityOnset:.05,complexityRamp:.25},
+      perc:{gain:.35,pan:.3,complexityOnset:.5,complexityRamp:.3,hitFreqLow:1100,hitFreqHigh:7000},
+      sparkle:{wave:'triangle',gain:.4,filterHz:6000,pan:.15,complexityOnset:.4,complexityRamp:.3},
+    },
+    pad:{ wave:'sine', gain:.1, filterHz:1200, layers:[{semis:0,lfoPeriodSec:14.3},{semis:4,lfoPeriodSec:17.9},{semis:7,lfoPeriodSec:22.1},{semis:11,lfoPeriodSec:27.6}] },
+    synth:{ attack:.005, release:.5, reverbSeconds:2.0, reverbMix:.22, delayTime:.28, delayFeedback:.4, delayMix:.28 },
+    evolution:{ scaleMorphPeriodSec:150, keyDriftSemis:2, keyDriftPeriodsSec:[97,139,173], tempoDriftBpm:6, tempoDriftPeriodsSec:[151,223], brightnessDriftPeriodsSec:[41,67,101], brightnessDepth:.3, spacePeriodsSec:[113,167], spaceDepth:.3, dynamicsPeriodsSec:[199,257], dynamicsDepth:.12, harmonicRhythmRangeSec:[14,6] },
+  },
+  { name: 'Drift', root: 174.61, bpm: 46,
+    scalePalette: [ [0,2,3,5,7,8,10],[0,2,3,5,7,8,11],[0,2,3,5,7,9,11],[0,1,3,5,6,8,10] ],
+    scaleNames: ['minor','harmonic minor','melodic minor','locrian'],
+    harmony: { substitution:{A:['A','B'],B:['A']}, start:'A', chordDegreeMap:{A:0,B:3} },
+    voices: {
+      lead:{wave:'sine',gain:.3,filterHz:1300,pan:-.1},
+      counter:{wave:'triangle',gain:.22,filterHz:800,pan:.15},
+      bass:{wave:'sine',gain:.55,filterHz:350,pan:0},
+      arp:{wave:'sine',gain:.18,filterHz:2200,pan:-.25,complexityOnset:.5,complexityRamp:.35},
+      perc:{gain:.25,pan:.2,complexityOnset:.8,complexityRamp:.2,hitFreqLow:500,hitFreqHigh:6200},
+      sparkle:{wave:'sine',gain:.3,filterHz:5200,pan:.2,complexityOnset:.75,complexityRamp:.25},
+    },
+    pad:{ wave:'sawtooth', gain:.22, filterHz:450, layers:[{semis:0,lfoPeriodSec:31.4},{semis:5,lfoPeriodSec:37.7},{semis:7,lfoPeriodSec:43.9},{semis:12,lfoPeriodSec:53.2}] },
+    synth:{ attack:.05, release:.6, reverbSeconds:5.5, reverbMix:.4, delayTime:.6, delayFeedback:.42, delayMix:.3 },
+    evolution:{ scaleMorphPeriodSec:420, keyDriftSemis:3, keyDriftPeriodsSec:[251,337,409], tempoDriftBpm:3, tempoDriftPeriodsSec:[293,401], brightnessDriftPeriodsSec:[97,151,211], brightnessDepth:.25, spacePeriodsSec:[227,311], spaceDepth:.35, dynamicsPeriodsSec:[347,433], dynamicsDepth:.14, harmonicRhythmRangeSec:[34,16] },
+  },
+  { name: 'Pulse', root: 196.0, bpm: 104,
+    scalePalette: [ [0,2,3,5,7,9,10],[0,2,3,5,7,8,10],[0,2,4,5,7,9,10],[0,2,3,5,6,9,10] ],
+    scaleNames: ['dorian','minor','mixolydian','dorian♭5'],
+    harmony: { substitution:{A:['A','B','A'],B:['A','C'],C:['B']}, start:'A', chordDegreeMap:{A:0,B:4,C:5} },
+    voices: {
+      lead:{wave:'sawtooth',gain:.3,filterHz:2600,pan:-.2},
+      counter:{wave:'square',gain:.22,filterHz:1200,pan:.25},
+      bass:{wave:'triangle',gain:.55,filterHz:700,pan:0},
+      arp:{wave:'square',gain:.24,filterHz:3600,pan:-.3,complexityOnset:.1,complexityRamp:.25},
+      perc:{gain:.55,pan:.3,complexityOnset:.05,complexityRamp:.2,hitFreqLow:750,hitFreqHigh:4200},
+      sparkle:{wave:'triangle',gain:.3,filterHz:5000,pan:.15,complexityOnset:.35,complexityRamp:.3},
+    },
+    pad:{ wave:'square', gain:.08, filterHz:900, layers:[{semis:0,lfoPeriodSec:11.3},{semis:7,lfoPeriodSec:13.7},{semis:10,lfoPeriodSec:16.9},{semis:12,lfoPeriodSec:19.1}] },
+    synth:{ attack:.005, release:.2, reverbSeconds:1.4, reverbMix:.16, delayTime:.22, delayFeedback:.3, delayMix:.18 },
+    evolution:{ scaleMorphPeriodSec:130, keyDriftSemis:2, keyDriftPeriodsSec:[83,113,151], tempoDriftBpm:4, tempoDriftPeriodsSec:[127,181], brightnessDriftPeriodsSec:[31,53,79], brightnessDepth:.3, spacePeriodsSec:[97,139], spaceDepth:.25, dynamicsPeriodsSec:[163,211], dynamicsDepth:.1, harmonicRhythmRangeSec:[10,4] },
+  },
+  { name: 'Dusk', root: 246.94, bpm: 72,
+    scalePalette: [ [0,1,4,5,7,8,11],[0,2,3,6,7,8,10],[0,1,4,5,7,9,10],[0,2,4,5,7,8,11] ],
+    scaleNames: ['phrygian dom','locrian ♮2','double harmonic','harmonic major'],
+    harmony: { substitution:{A:['A','B'],B:['A','C'],C:['A']}, start:'A', chordDegreeMap:{A:0,B:3,C:5} },
+    voices: {
+      lead:{wave:'triangle',gain:.42,filterHz:2100,pan:-.15},
+      counter:{wave:'sine',gain:.3,filterHz:950,pan:.2},
+      bass:{wave:'sine',gain:.5,filterHz:480,pan:0},
+      arp:{wave:'triangle',gain:.26,filterHz:2800,pan:-.3,complexityOnset:.25,complexityRamp:.3},
+      perc:{gain:.4,pan:.25,complexityOnset:.4,complexityRamp:.3,hitFreqLow:820,hitFreqHigh:4800},
+      sparkle:{wave:'sine',gain:.32,filterHz:3800,pan:.1,complexityOnset:.55,complexityRamp:.3},
+    },
+    pad:{ wave:'sawtooth', gain:.14, filterHz:600, layers:[{semis:0,lfoPeriodSec:21.1},{semis:4,lfoPeriodSec:26.3},{semis:7,lfoPeriodSec:31.7},{semis:11,lfoPeriodSec:38.9}] },
+    synth:{ attack:.02, release:.4, reverbSeconds:2.8, reverbMix:.28, delayTime:.36, delayFeedback:.35, delayMix:.22 },
+    evolution:{ scaleMorphPeriodSec:200, keyDriftSemis:3, keyDriftPeriodsSec:[113,167,223], tempoDriftBpm:4, tempoDriftPeriodsSec:[179,239], brightnessDriftPeriodsSec:[47,71,113], brightnessDepth:.3, spacePeriodsSec:[139,191], spaceDepth:.35, dynamicsPeriodsSec:[233,307], dynamicsDepth:.11, harmonicRhythmRangeSec:[17,7] },
+  },
+];
 
 /* ============================================================================
    ENGINE
 ============================================================================ */
 let complexity = 0.35;
+let sessionOffset = 0;
+let currentThemeName = '';
 
 function makeGen(substitution, start) { return { word: [start], pos: 0, substitution }; }
 function nextSymbol(gen) {
@@ -205,6 +292,23 @@ function lerp(a, b, f) { return a + (b - a) * f; }
 
 const EV = CONFIG.evolution;
 const HARM = CONFIG.harmony;
+
+function applyTheme(idx) {
+  const th = THEMES[idx];
+  CONFIG.root = th.root;
+  CONFIG.bpm = th.bpm;
+  EV.scalePalette = th.scalePalette;
+  EV.scaleNames = th.scaleNames;
+  HARM.substitution = th.harmony.substitution;
+  HARM.start = th.harmony.start;
+  HARM.chordDegreeMap = th.harmony.chordDegreeMap;
+  for (const vk of Object.keys(th.voices)) Object.assign(CONFIG.voices[vk], th.voices[vk]);
+  Object.assign(CONFIG.pad, th.pad);
+  Object.assign(CONFIG.synth, th.synth);
+  Object.assign(EV, th.evolution);
+  currentThemeName = th.name;
+}
+applyTheme(0);
 
 function keyDriftSemisAt(t) { return quasi(t, EV.keyDriftPeriodsSec) * EV.keyDriftSemis; }
 
@@ -250,7 +354,6 @@ function complexityGateFor(cfg) {
   return smoothstep((complexity - cfg.complexityOnset) / cfg.complexityRamp);
 }
 
-// ---- harmony: chord progression is itself an aperiodic sequence -----------
 const harmonyState = { gen: makeGen(HARM.substitution, HARM.start), seq: [] };
 function chordSymbolAtIndex(idx) {
   while (harmonyState.seq.length <= idx) harmonyState.seq.push(nextSymbol(harmonyState.gen));
@@ -275,8 +378,7 @@ function scaleDegreeForTone(toneIdx, octaveShift, t) {
   return root + within + cycle * len + (octaveShift || 0) * len;
 }
 
-// ---- audio graph ------------------------------------------------------------
-let ctx = null, masterGain, noteBus, delayNode, delayWet, convolver, reverbWet, noiseBuffer;
+let ctx = null, masterGain, noteBus, delayNode, delayFeedbackGain, delayWet, convolver, reverbWet, noiseBuffer;
 let padNodes = [];
 let running = false;
 let audioStartTime = 0, startWallTime = 0;
@@ -306,8 +408,8 @@ function setupGraph() {
   noteBus = ctx.createGain(); noteBus.gain.value = 1; noteBus.connect(masterGain);
 
   delayNode = ctx.createDelay(5.0); delayNode.delayTime.value = CONFIG.synth.delayTime;
-  const feedback = ctx.createGain(); feedback.gain.value = CONFIG.synth.delayFeedback;
-  delayNode.connect(feedback); feedback.connect(delayNode);
+  delayFeedbackGain = ctx.createGain(); delayFeedbackGain.gain.value = CONFIG.synth.delayFeedback;
+  delayNode.connect(delayFeedbackGain); delayFeedbackGain.connect(delayNode);
   delayWet = ctx.createGain(); delayWet.gain.value = CONFIG.synth.delayMix;
   delayNode.connect(delayWet); delayWet.connect(masterGain);
   noteBus.connect(delayNode);
@@ -340,7 +442,8 @@ function playNote(voiceCfg, freq, time, durSec, vel, filterHz) {
 function playPercNote(cfg, time, durSec, vel, accent) {
   const src = ctx.createBufferSource(); src.buffer = noiseBuffer;
   const bp = ctx.createBiquadFilter(); bp.type = 'bandpass';
-  bp.frequency.value = accent ? 5200 : 900; bp.Q.value = 1.1;
+  bp.frequency.value = accent ? (cfg.hitFreqHigh || 5200) : (cfg.hitFreqLow || 900);
+  bp.Q.value = 1.1;
   const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
   if (panner) panner.pan.value = cfg.pan;
   const env = ctx.createGain();
@@ -363,14 +466,17 @@ function initVoiceStates() {
   for (const key of Object.keys(CONFIG.voices)) {
     const cfg = CONFIG.voices[key];
     if (!cfg.enabled) continue;
-    voiceStates[key] = { cfg, gen: makeGen(cfg.substitution, cfg.start), queue: [], nextTime: ctx.currentTime + 0.1 };
+    const gen = makeGen(cfg.substitution, cfg.start);
+    const preSkip = Math.floor(Math.random() * 40);
+    for (let i = 0; i < preSkip; i++) nextSymbol(gen);
+    voiceStates[key] = { cfg, gen, queue: [], nextTime: ctx.currentTime + 0.1 };
   }
 }
 
 function scheduleVoice(key) {
   const v = voiceStates[key]; const cfg = v.cfg;
   while (v.nextTime < ctx.currentTime + SCHEDULE_AHEAD) {
-    const tElapsed = v.nextTime - audioStartTime;
+    const tElapsed = (v.nextTime - audioStartTime) + sessionOffset;
     if (v.queue.length === 0) {
       const sym = nextSymbol(v.gen);
       const variants = cfg.tiles[sym];
@@ -416,7 +522,7 @@ function startPad() {
 }
 function ambientTick() {
   if (!running) return;
-  const now = ctx.currentTime; const t = now - audioStartTime;
+  const now = ctx.currentTime; const t = (now - audioStartTime) + sessionOffset;
   for (const node of padNodes) {
     const phase = ((now - node.startedAt) / node.layer.lfoPeriodSec) * Math.PI * 2;
     const level = (Math.sin(phase) * 0.5 + 0.5) * CONFIG.pad.gain;
@@ -460,6 +566,11 @@ const visualizer = (() => {
     events[voiceKey].push({ sym, time, dur: durSec });
     if (events[voiceKey].length > 260) events[voiceKey].shift();
   }
+  function clearAll() {
+    voiceKeys.forEach(k => events[k] = []);
+    const w = canvas.getBoundingClientRect().width, h = canvas.getBoundingClientRect().height;
+    dctx.clearRect(0, 0, w, h);
+  }
 
   const colors = {
     lead: { A:'#8FE3D3', B:'#5FBFAE', C:'#4E7A72' },
@@ -473,39 +584,44 @@ const visualizer = (() => {
   function draw() {
     const w = canvas.getBoundingClientRect().width, h = canvas.getBoundingClientRect().height;
     dctx.clearRect(0, 0, w, h);
-    const now = (ctx && running) ? ctx.currentTime : 0;
-    dctx.strokeStyle = 'rgba(231,229,222,0.15)';
-    dctx.beginPath(); dctx.moveTo(playheadX, 8); dctx.lineTo(playheadX, h - 8); dctx.stroke();
-
-    for (const key of voiceKeys) {
-      const y = rowY[key];
-      for (const ev of events[key]) {
-        const x = playheadX + (ev.time - now) * pxPerSec;
-        const width = Math.max(2, ev.dur * pxPerSec - 3);
-        if (x + width < -20 || x > w + 20) continue;
-        const near = Math.abs(x - playheadX) < 10;
-        dctx.fillStyle = colors[key][ev.sym] || '#888';
-        dctx.globalAlpha = near ? 1 : 0.7;
-        const rh = near ? rowH + 6 : rowH;
-        dctx.fillRect(x, y - rh / 2, width, rh);
-        dctx.globalAlpha = 1;
+    const now = (ctx && running) ? ctx.currentTime : null;
+    if (now !== null) {
+      dctx.strokeStyle = 'rgba(231,229,222,0.15)';
+      dctx.beginPath(); dctx.moveTo(playheadX, 8); dctx.lineTo(playheadX, h - 8); dctx.stroke();
+      for (const key of voiceKeys) {
+        const y = rowY[key];
+        for (const ev of events[key]) {
+          const x = playheadX + (ev.time - now) * pxPerSec;
+          const width = Math.max(2, ev.dur * pxPerSec - 3);
+          if (x + width < -20 || x > w + 20) continue;
+          const near = Math.abs(x - playheadX) < 10;
+          dctx.fillStyle = colors[key][ev.sym] || '#888';
+          dctx.globalAlpha = near ? 1 : 0.7;
+          const rh = near ? rowH + 6 : rowH;
+          dctx.fillRect(x, y - rh / 2, width, rh);
+          dctx.globalAlpha = 1;
+        }
+        dctx.fillStyle = 'rgba(231,229,222,0.32)';
+        dctx.font = '10px "IBM Plex Mono", monospace';
+        dctx.fillText(key, 6, y - rowH / 2 - 6);
       }
-      dctx.fillStyle = 'rgba(231,229,222,0.32)';
-      dctx.font = '10px "IBM Plex Mono", monospace';
-      dctx.fillText(key, 6, y - rowH / 2 - 6);
     }
     requestAnimationFrame(draw);
   }
   resize(); requestAnimationFrame(draw);
-  return { pushSymbol };
+  return { pushSymbol, clear: clearAll };
 })();
 
 /* ---- transport / UI ----------------------------------------------------- */
 const playBtn = document.getElementById('playBtn');
 const volSlider = document.getElementById('volSlider');
 const complexitySlider = document.getElementById('complexitySlider');
+const themeSelect = document.getElementById('themeSelect');
 const elapsedEl = document.getElementById('elapsed');
 const statusEl = document.getElementById('eviStatus');
+
+themeSelect.innerHTML = '<option value="random">🎲 random</option>' +
+  THEMES.map((t, i) => `<option value="${i}">${t.name}</option>`).join('');
 
 function formatElapsed(sec) {
   const m = Math.floor(sec / 60).toString().padStart(2, '0');
@@ -515,7 +631,7 @@ function formatElapsed(sec) {
 
 function updateStatus() {
   if (!running) return;
-  const t = ctx.currentTime - audioStartTime;
+  const t = (ctx.currentTime - audioStartTime) + sessionOffset;
   const key = keyDriftSemisAt(t);
   const { i0, i1, frac } = scaleBlendAt(t);
   const bpm = bpmAt(t);
@@ -524,14 +640,31 @@ function updateStatus() {
   let active = 0;
   for (const k of Object.keys(CONFIG.voices)) if (complexityGateFor(CONFIG.voices[k]) > 0.05) active++;
   statusEl.textContent =
-    `key ${key >= 0 ? '+' : ''}${key.toFixed(1)}st · mode ${EV.scaleNames[i0]}→${EV.scaleNames[i1]} ${Math.round(frac * 100)}% · ${bpm.toFixed(0)}bpm · ${chordType} · ${active}/6 voices`;
+    `${currentThemeName} · key ${key >= 0 ? '+' : ''}${key.toFixed(1)}st · mode ${EV.scaleNames[i0]}→${EV.scaleNames[i1]} ${Math.round(frac * 100)}% · ${bpm.toFixed(0)}bpm · ${chordType} · ${active}/6 voices`;
 }
 
 function start() {
   if (!ctx) setupGraph();
   if (ctx.state === 'suspended') ctx.resume();
+
+  const sel = themeSelect.value;
+  const themeIdx = sel === 'random' ? Math.floor(Math.random() * THEMES.length) : parseInt(sel, 10);
+  applyTheme(themeIdx);
+
+  sessionOffset = Math.random() * 100000;
+
+  if (convolver) convolver.buffer = buildImpulseResponse(ctx, CONFIG.synth.reverbSeconds);
+  if (reverbWet) reverbWet.gain.value = CONFIG.synth.reverbMix;
+  if (delayNode) delayNode.delayTime.setTargetAtTime(CONFIG.synth.delayTime, ctx.currentTime, 0.05);
+  if (delayFeedbackGain) delayFeedbackGain.gain.setTargetAtTime(CONFIG.synth.delayFeedback, ctx.currentTime, 0.05);
+  if (delayWet) delayWet.gain.value = CONFIG.synth.delayMix;
   if (masterGain) masterGain.gain.setTargetAtTime(CONFIG.masterVolume, ctx.currentTime, 0.05);
+
   audioStartTime = ctx.currentTime;
+  harmonyState.gen = makeGen(HARM.substitution, HARM.start);
+  harmonyState.seq = [];
+
+  visualizer.clear();
   initVoiceStates();
   running = true;
   startWallTime = performance.now();
@@ -550,6 +683,9 @@ function stop() {
   if (masterGain) masterGain.gain.setTargetAtTime(0, ctx.currentTime, 0.08);
   setTimeout(() => { if (ctx) ctx.suspend(); }, 200);
   playBtn.textContent = '▶ Play'; playBtn.classList.remove('playing');
+  visualizer.clear();
+  elapsedEl.textContent = '00:00';
+  statusEl.textContent = '—';
 }
 playBtn.addEventListener('click', () => { running ? stop() : start(); });
 volSlider.addEventListener('input', () => { CONFIG.masterVolume = parseFloat(volSlider.value); });
