@@ -18,18 +18,23 @@
     background: radial-gradient(1200px 800px at 50% -10%, #161A24 0%, var(--bg) 60%);
     color: var(--text); font-family: 'Space Grotesk', sans-serif; }
   .mono{ font-family: 'IBM Plex Mono', monospace; }
-  .wrap{ max-width: 660px; margin: 40px auto; padding: 0 16px; }
+  .wrap{ max-width: 700px; margin: 40px auto; padding: 0 16px; }
   .panel{ background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
-  .controls{ display:flex; align-items:center; gap: 14px; padding: 16px 18px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
-  button#playBtn{
+  .controls{ display:flex; align-items:center; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  button#playBtn, button#customBtn{
     appearance:none; border:1px solid var(--lead); background:transparent; color: var(--lead);
     font-family:'IBM Plex Mono', monospace; font-size:13px; letter-spacing:0.06em; text-transform:uppercase;
-    padding: 10px 18px; border-radius: 999px; cursor:pointer; transition: background 0.15s ease, color 0.15s ease; }
-  button#playBtn:hover{ background: var(--lead); color: #0B0D12; }
-  button#playBtn:focus-visible{ outline: 2px solid var(--lead); outline-offset: 3px; }
+    padding: 10px 16px; border-radius: 999px; cursor:pointer; transition: background 0.15s ease, color 0.15s ease, opacity .15s ease; }
+  button#playBtn:hover, button#customBtn:hover{ background: var(--lead); color: #0B0D12; }
+  button#playBtn:focus-visible, button#customBtn:focus-visible{ outline: 2px solid var(--lead); outline-offset: 3px; }
   button#playBtn.playing{ background: var(--lead); color:#0B0D12; }
+  button#customBtn{ border-color: var(--counter); color: var(--counter); }
+  button#customBtn:hover{ background: var(--counter); color:#0B0D12; }
+  button:disabled{ opacity:0.35; cursor:not-allowed; }
+  button:disabled:hover{ background:transparent !important; color:inherit !important; }
+  select:disabled{ opacity:0.35; cursor:not-allowed; }
   .slider{ display:flex; align-items:center; gap:8px; color: var(--muted); font-size:12px; }
-  .slider input[type=range]{ accent-color: var(--lead); width: 92px; }
+  .slider input[type=range]{ accent-color: var(--lead); width: 88px; }
   .slider select{ background:#0D1017; color:var(--text); border:1px solid var(--line); border-radius:6px;
     font-family:'IBM Plex Mono', monospace; font-size:12px; padding:5px 6px; }
   .elapsed{ margin-left:auto; color: var(--muted); font-size: 12px; }
@@ -40,6 +45,23 @@
   .legend .bass .dot{ background: var(--bass); } .legend .arp .dot{ background: var(--arp); }
   .legend .perc .dot{ background: var(--perc); } .legend .sparkle .dot{ background: var(--sparkle); }
   .status{ padding: 10px 18px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--muted); font-family:'IBM Plex Mono', monospace; }
+
+  .custom-panel{ border-top: 1px solid var(--line); padding: 16px 18px 18px; background:#0F121A; }
+  .custom-fieldset{ border:none; margin:0; padding:0; min-width:0; }
+  .custom-section{ margin-bottom: 16px; }
+  .custom-section:last-child{ margin-bottom:0; }
+  .custom-heading{ font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:0.1em; text-transform:uppercase;
+    color: var(--muted); margin-bottom: 10px; cursor:default; }
+  details.custom-section > summary.custom-heading{ cursor:pointer; }
+  .custom-subheading{ font-size:10.5px; letter-spacing:0.08em; text-transform:uppercase; color: var(--muted);
+    opacity:0.7; margin: 10px 0 6px; }
+  .custom-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px 16px; }
+  .field{ display:flex; flex-direction:column; gap:5px; font-size:11.5px; color: var(--muted); }
+  .field .val{ color: var(--text); font-family:'IBM Plex Mono', monospace; }
+  .field select, .field input[type=range]{ width:100%; }
+  .field select{ background:#0D1017; color:var(--text); border:1px solid var(--line); border-radius:6px;
+    font-family:'IBM Plex Mono', monospace; font-size:12px; padding:6px 6px; }
+  .field input[type=range]{ accent-color: var(--counter); }
 </style>
 </head>
 <body>
@@ -48,10 +70,94 @@
     <div class="controls">
       <button id="playBtn">▶ Play</button>
       <div class="slider"><span>style</span><select id="themeSelect"></select></div>
+      <button id="customBtn">Custom</button>
       <div class="slider"><span>vol</span><input id="volSlider" type="range" min="0" max="1" step="0.01" value="0.7"></div>
       <div class="slider"><span>complexity</span><input id="complexitySlider" type="range" min="0" max="1" step="0.01" value="0.35"></div>
       <div class="elapsed mono" id="elapsed">00:00</div>
     </div>
+
+    <div class="custom-panel" id="customPanel" hidden>
+      <fieldset class="custom-fieldset" id="customFieldset">
+        <div class="custom-section">
+          <div class="custom-heading">General</div>
+          <div class="custom-grid">
+            <label class="field">Root note
+              <select id="cfRoot"></select>
+            </label>
+            <label class="field">Tempo <span class="val" id="cfBpmVal">64</span>bpm
+              <input type="range" id="cfBpm" min="40" max="140" step="1" value="64">
+            </label>
+            <label class="field">Mood
+              <select id="cfMode"></select>
+            </label>
+            <label class="field">Instrument character
+              <select id="cfTimbre"></select>
+            </label>
+            <label class="field">Space <span class="val" id="cfSpaceVal">0.50</span>
+              <input type="range" id="cfSpace" min="0" max="1" step="0.01" value="0.5">
+            </label>
+            <label class="field">Chord motion
+              <select id="cfChord"></select>
+            </label>
+          </div>
+        </div>
+
+        <details class="custom-section">
+          <summary class="custom-heading">Advanced</summary>
+          <div class="custom-grid">
+            <label class="field">Key drift <span class="val" id="cfKeyDriftVal">4.0</span>st
+              <input type="range" id="cfKeyDrift" min="0" max="8" step="0.5" value="4">
+            </label>
+            <label class="field">Harmony drift <span class="val" id="cfMorphVal">240</span>s
+              <input type="range" id="cfMorph" min="60" max="600" step="10" value="240">
+            </label>
+            <label class="field">Chord pace, simple <span class="val" id="cfHarmLowVal">20</span>s
+              <input type="range" id="cfHarmLow" min="4" max="30" step="1" value="20">
+            </label>
+            <label class="field">Chord pace, complex <span class="val" id="cfHarmHighVal">9</span>s
+              <input type="range" id="cfHarmHigh" min="3" max="16" step="1" value="9">
+            </label>
+            <label class="field">Delay time <span class="val" id="cfDelayTimeVal">0.42</span>s
+              <input type="range" id="cfDelayTime" min="0.1" max="0.8" step="0.01" value="0.42">
+            </label>
+            <label class="field">Delay feedback <span class="val" id="cfDelayFeedbackVal">0.32</span>
+              <input type="range" id="cfDelayFeedback" min="0" max="0.6" step="0.01" value="0.32">
+            </label>
+            <label class="field">Delay mix <span class="val" id="cfDelayMixVal">0.20</span>
+              <input type="range" id="cfDelayMix" min="0" max="0.4" step="0.01" value="0.2">
+            </label>
+            <label class="field">Percussion tone <span class="val" id="cfPercToneVal">0.30</span>
+              <input type="range" id="cfPercTone" min="0" max="1" step="0.01" value="0.3">
+            </label>
+            <label class="field">Pad level <span class="val" id="cfPadGainVal">0.15</span>
+              <input type="range" id="cfPadGain" min="0" max="0.3" step="0.01" value="0.15">
+            </label>
+          </div>
+          <div class="custom-subheading">Voice levels</div>
+          <div class="custom-grid">
+            <label class="field">Lead <span class="val" id="cfGainLeadVal">0.50</span>
+              <input type="range" id="cfGainLead" min="0" max="0.7" step="0.01" value="0.5">
+            </label>
+            <label class="field">Counter <span class="val" id="cfGainCounterVal">0.35</span>
+              <input type="range" id="cfGainCounter" min="0" max="0.7" step="0.01" value="0.35">
+            </label>
+            <label class="field">Bass <span class="val" id="cfGainBassVal">0.50</span>
+              <input type="range" id="cfGainBass" min="0" max="0.7" step="0.01" value="0.5">
+            </label>
+            <label class="field">Arp <span class="val" id="cfGainArpVal">0.28</span>
+              <input type="range" id="cfGainArp" min="0" max="0.7" step="0.01" value="0.28">
+            </label>
+            <label class="field">Perc <span class="val" id="cfGainPercVal">0.45</span>
+              <input type="range" id="cfGainPerc" min="0" max="0.7" step="0.01" value="0.45">
+            </label>
+            <label class="field">Sparkle <span class="val" id="cfGainSparkleVal">0.35</span>
+              <input type="range" id="cfGainSparkle" min="0" max="0.7" step="0.01" value="0.35">
+            </label>
+          </div>
+        </details>
+      </fieldset>
+    </div>
+
     <canvas id="ribbon"></canvas>
     <div class="legend">
       <span class="lead"><span class="dot"></span>lead</span>
@@ -67,11 +173,10 @@
 
 <script>
 /* ============================================================================
-   CONFIG — generic engine defaults. Per-theme values below (THEMES array)
-   override root/scale/harmony/instrument/evolution fields at play time; the
-   substitution rules and tile shapes (the actual aperiodic structure) stay
-   shared across themes so every style still runs on the same never-repeating
-   engine, just dressed differently.
+   CONFIG — generic engine defaults; THEMES (further down) override root/scale/
+   harmony/instrument/evolution fields. Substitution rules and tile shapes stay
+   shared across every theme, so every style runs on the same never-repeating
+   engine, just performed differently.
 ============================================================================ */
 const CONFIG = {
   masterVolume: 0.7,
@@ -156,11 +261,9 @@ const CONFIG = {
 
   humanize: { timingJitterSec: 0.012, velocityJitter: 0.08 },
 
-  // fields NOT overridden by themes (structural, engine-level)
   evolution: {
     variantPeriodSec: 47,
     presencePeriodsSec: { sparkle: [173, 241, 337], arp: [151, 223, 311], perc: [139, 197, 269] },
-    // themed fields below get replaced by applyTheme(); present here just as fallback
     scalePalette: [ [0,2,3,5,7,8,10],[0,2,3,5,7,9,10],[0,1,3,5,7,8,10],[0,2,4,6,7,9,11] ],
     scaleNames: ['minor','dorian','phrygian','lydian'],
     scaleMorphPeriodSec: 240, keyDriftSemis: 4, keyDriftPeriodsSec: [131,197,281],
@@ -173,94 +276,186 @@ const CONFIG = {
 };
 
 /* ============================================================================
-   THEMES — different styles/moods. Each overrides root note, scale modes,
-   chord progression, per-voice instrument (waveform/gain/filter/pan), pad
-   texture, reverb/delay character, and evolution pacing. The substitution
-   rules and tile shapes stay the same, so every theme is a different
-   "performance" of the same generative structure.
+   THEMES — a dozen distinct styles. Each overrides root, scale modes, chord
+   progression, per-voice instrument (waveform/gain/filter/pan), pad texture,
+   reverb/delay character, and evolution pacing.
 ============================================================================ */
 const THEMES = [
   { name: 'Nocturne', root: 220, bpm: 64,
     scalePalette: [ [0,2,3,5,7,8,10],[0,2,3,5,7,9,10],[0,1,3,5,7,8,10],[0,2,4,6,7,9,11] ],
     scaleNames: ['minor','dorian','phrygian','lydian'],
     harmony: { substitution:{A:['A','B'],B:['A','C'],C:['A']}, start:'A', chordDegreeMap:{A:0,B:5,C:3} },
-    voices: {
-      lead:{wave:'triangle',gain:.5,filterHz:2400,pan:-.15},
-      counter:{wave:'sine',gain:.35,filterHz:1000,pan:.2},
-      bass:{wave:'sine',gain:.5,filterHz:500,pan:0},
-      arp:{wave:'triangle',gain:.28,filterHz:3000,pan:-.3,complexityOnset:.2,complexityRamp:.35},
+    voices: { lead:{wave:'triangle',gain:.5,filterHz:2400,pan:-.15}, counter:{wave:'sine',gain:.35,filterHz:1000,pan:.2},
+      bass:{wave:'sine',gain:.5,filterHz:500,pan:0}, arp:{wave:'triangle',gain:.28,filterHz:3000,pan:-.3,complexityOnset:.2,complexityRamp:.35},
       perc:{gain:.45,pan:.3,complexityOnset:.45,complexityRamp:.3,hitFreqLow:900,hitFreqHigh:5200},
-      sparkle:{wave:'sine',gain:.35,filterHz:4200,pan:.1,complexityOnset:.6,complexityRamp:.3},
-    },
+      sparkle:{wave:'sine',gain:.35,filterHz:4200,pan:.1,complexityOnset:.6,complexityRamp:.3} },
     pad:{ wave:'sawtooth', gain:.15, filterHz:650, layers:[{semis:0,lfoPeriodSec:19.7},{semis:7,lfoPeriodSec:23.3},{semis:12,lfoPeriodSec:29.9},{semis:15,lfoPeriodSec:37.1}] },
     synth:{ attack:.02, release:.35, reverbSeconds:3.2, reverbMix:.26, delayTime:.42, delayFeedback:.32, delayMix:.2 },
-    evolution:{ scaleMorphPeriodSec:240, keyDriftSemis:4, keyDriftPeriodsSec:[131,197,281], tempoDriftBpm:5, tempoDriftPeriodsSec:[211,307], brightnessDriftPeriodsSec:[53,89,149], brightnessDepth:.35, spacePeriodsSec:[163,229], spaceDepth:.4, dynamicsPeriodsSec:[281,373], dynamicsDepth:.1, harmonicRhythmRangeSec:[20,9] },
-  },
+    evolution:{ scaleMorphPeriodSec:240, keyDriftSemis:4, keyDriftPeriodsSec:[131,197,281], tempoDriftBpm:5, tempoDriftPeriodsSec:[211,307], brightnessDriftPeriodsSec:[53,89,149], brightnessDepth:.35, spacePeriodsSec:[163,229], spaceDepth:.4, dynamicsPeriodsSec:[281,373], dynamicsDepth:.1, harmonicRhythmRangeSec:[20,9] } },
+
   { name: 'Glass', root: 261.63, bpm: 92,
     scalePalette: [ [0,2,4,5,7,9,11],[0,2,4,6,7,9,11],[0,2,4,5,7,9,10],[0,2,4,6,8,9,11] ],
     scaleNames: ['major','lydian','mixolydian','lydian+'],
     harmony: { substitution:{A:['A','B'],B:['A','C'],C:['A']}, start:'A', chordDegreeMap:{A:0,B:4,C:5} },
-    voices: {
-      lead:{wave:'square',gain:.32,filterHz:3400,pan:-.2},
-      counter:{wave:'triangle',gain:.3,filterHz:1800,pan:.25},
-      bass:{wave:'sine',gain:.45,filterHz:600,pan:0},
-      arp:{wave:'sine',gain:.36,filterHz:5200,pan:-.35,complexityOnset:.05,complexityRamp:.25},
+    voices: { lead:{wave:'square',gain:.32,filterHz:3400,pan:-.2}, counter:{wave:'triangle',gain:.3,filterHz:1800,pan:.25},
+      bass:{wave:'sine',gain:.45,filterHz:600,pan:0}, arp:{wave:'sine',gain:.36,filterHz:5200,pan:-.35,complexityOnset:.05,complexityRamp:.25},
       perc:{gain:.35,pan:.3,complexityOnset:.5,complexityRamp:.3,hitFreqLow:1100,hitFreqHigh:7000},
-      sparkle:{wave:'triangle',gain:.4,filterHz:6000,pan:.15,complexityOnset:.4,complexityRamp:.3},
-    },
+      sparkle:{wave:'triangle',gain:.4,filterHz:6000,pan:.15,complexityOnset:.4,complexityRamp:.3} },
     pad:{ wave:'sine', gain:.1, filterHz:1200, layers:[{semis:0,lfoPeriodSec:14.3},{semis:4,lfoPeriodSec:17.9},{semis:7,lfoPeriodSec:22.1},{semis:11,lfoPeriodSec:27.6}] },
     synth:{ attack:.005, release:.5, reverbSeconds:2.0, reverbMix:.22, delayTime:.28, delayFeedback:.4, delayMix:.28 },
-    evolution:{ scaleMorphPeriodSec:150, keyDriftSemis:2, keyDriftPeriodsSec:[97,139,173], tempoDriftBpm:6, tempoDriftPeriodsSec:[151,223], brightnessDriftPeriodsSec:[41,67,101], brightnessDepth:.3, spacePeriodsSec:[113,167], spaceDepth:.3, dynamicsPeriodsSec:[199,257], dynamicsDepth:.12, harmonicRhythmRangeSec:[14,6] },
-  },
+    evolution:{ scaleMorphPeriodSec:150, keyDriftSemis:2, keyDriftPeriodsSec:[97,139,173], tempoDriftBpm:6, tempoDriftPeriodsSec:[151,223], brightnessDriftPeriodsSec:[41,67,101], brightnessDepth:.3, spacePeriodsSec:[113,167], spaceDepth:.3, dynamicsPeriodsSec:[199,257], dynamicsDepth:.12, harmonicRhythmRangeSec:[14,6] } },
+
   { name: 'Drift', root: 174.61, bpm: 46,
     scalePalette: [ [0,2,3,5,7,8,10],[0,2,3,5,7,8,11],[0,2,3,5,7,9,11],[0,1,3,5,6,8,10] ],
     scaleNames: ['minor','harmonic minor','melodic minor','locrian'],
     harmony: { substitution:{A:['A','B'],B:['A']}, start:'A', chordDegreeMap:{A:0,B:3} },
-    voices: {
-      lead:{wave:'sine',gain:.3,filterHz:1300,pan:-.1},
-      counter:{wave:'triangle',gain:.22,filterHz:800,pan:.15},
-      bass:{wave:'sine',gain:.55,filterHz:350,pan:0},
-      arp:{wave:'sine',gain:.18,filterHz:2200,pan:-.25,complexityOnset:.5,complexityRamp:.35},
+    voices: { lead:{wave:'sine',gain:.3,filterHz:1300,pan:-.1}, counter:{wave:'triangle',gain:.22,filterHz:800,pan:.15},
+      bass:{wave:'sine',gain:.55,filterHz:350,pan:0}, arp:{wave:'sine',gain:.18,filterHz:2200,pan:-.25,complexityOnset:.5,complexityRamp:.35},
       perc:{gain:.25,pan:.2,complexityOnset:.8,complexityRamp:.2,hitFreqLow:500,hitFreqHigh:6200},
-      sparkle:{wave:'sine',gain:.3,filterHz:5200,pan:.2,complexityOnset:.75,complexityRamp:.25},
-    },
+      sparkle:{wave:'sine',gain:.3,filterHz:5200,pan:.2,complexityOnset:.75,complexityRamp:.25} },
     pad:{ wave:'sawtooth', gain:.22, filterHz:450, layers:[{semis:0,lfoPeriodSec:31.4},{semis:5,lfoPeriodSec:37.7},{semis:7,lfoPeriodSec:43.9},{semis:12,lfoPeriodSec:53.2}] },
     synth:{ attack:.05, release:.6, reverbSeconds:5.5, reverbMix:.4, delayTime:.6, delayFeedback:.42, delayMix:.3 },
-    evolution:{ scaleMorphPeriodSec:420, keyDriftSemis:3, keyDriftPeriodsSec:[251,337,409], tempoDriftBpm:3, tempoDriftPeriodsSec:[293,401], brightnessDriftPeriodsSec:[97,151,211], brightnessDepth:.25, spacePeriodsSec:[227,311], spaceDepth:.35, dynamicsPeriodsSec:[347,433], dynamicsDepth:.14, harmonicRhythmRangeSec:[34,16] },
-  },
+    evolution:{ scaleMorphPeriodSec:420, keyDriftSemis:3, keyDriftPeriodsSec:[251,337,409], tempoDriftBpm:3, tempoDriftPeriodsSec:[293,401], brightnessDriftPeriodsSec:[97,151,211], brightnessDepth:.25, spacePeriodsSec:[227,311], spaceDepth:.35, dynamicsPeriodsSec:[347,433], dynamicsDepth:.14, harmonicRhythmRangeSec:[34,16] } },
+
   { name: 'Pulse', root: 196.0, bpm: 104,
     scalePalette: [ [0,2,3,5,7,9,10],[0,2,3,5,7,8,10],[0,2,4,5,7,9,10],[0,2,3,5,6,9,10] ],
     scaleNames: ['dorian','minor','mixolydian','dorian♭5'],
     harmony: { substitution:{A:['A','B','A'],B:['A','C'],C:['B']}, start:'A', chordDegreeMap:{A:0,B:4,C:5} },
-    voices: {
-      lead:{wave:'sawtooth',gain:.3,filterHz:2600,pan:-.2},
-      counter:{wave:'square',gain:.22,filterHz:1200,pan:.25},
-      bass:{wave:'triangle',gain:.55,filterHz:700,pan:0},
-      arp:{wave:'square',gain:.24,filterHz:3600,pan:-.3,complexityOnset:.1,complexityRamp:.25},
+    voices: { lead:{wave:'sawtooth',gain:.3,filterHz:2600,pan:-.2}, counter:{wave:'square',gain:.22,filterHz:1200,pan:.25},
+      bass:{wave:'triangle',gain:.55,filterHz:700,pan:0}, arp:{wave:'square',gain:.24,filterHz:3600,pan:-.3,complexityOnset:.1,complexityRamp:.25},
       perc:{gain:.55,pan:.3,complexityOnset:.05,complexityRamp:.2,hitFreqLow:750,hitFreqHigh:4200},
-      sparkle:{wave:'triangle',gain:.3,filterHz:5000,pan:.15,complexityOnset:.35,complexityRamp:.3},
-    },
+      sparkle:{wave:'triangle',gain:.3,filterHz:5000,pan:.15,complexityOnset:.35,complexityRamp:.3} },
     pad:{ wave:'square', gain:.08, filterHz:900, layers:[{semis:0,lfoPeriodSec:11.3},{semis:7,lfoPeriodSec:13.7},{semis:10,lfoPeriodSec:16.9},{semis:12,lfoPeriodSec:19.1}] },
     synth:{ attack:.005, release:.2, reverbSeconds:1.4, reverbMix:.16, delayTime:.22, delayFeedback:.3, delayMix:.18 },
-    evolution:{ scaleMorphPeriodSec:130, keyDriftSemis:2, keyDriftPeriodsSec:[83,113,151], tempoDriftBpm:4, tempoDriftPeriodsSec:[127,181], brightnessDriftPeriodsSec:[31,53,79], brightnessDepth:.3, spacePeriodsSec:[97,139], spaceDepth:.25, dynamicsPeriodsSec:[163,211], dynamicsDepth:.1, harmonicRhythmRangeSec:[10,4] },
-  },
+    evolution:{ scaleMorphPeriodSec:130, keyDriftSemis:2, keyDriftPeriodsSec:[83,113,151], tempoDriftBpm:4, tempoDriftPeriodsSec:[127,181], brightnessDriftPeriodsSec:[31,53,79], brightnessDepth:.3, spacePeriodsSec:[97,139], spaceDepth:.25, dynamicsPeriodsSec:[163,211], dynamicsDepth:.1, harmonicRhythmRangeSec:[10,4] } },
+
   { name: 'Dusk', root: 246.94, bpm: 72,
     scalePalette: [ [0,1,4,5,7,8,11],[0,2,3,6,7,8,10],[0,1,4,5,7,9,10],[0,2,4,5,7,8,11] ],
     scaleNames: ['phrygian dom','locrian ♮2','double harmonic','harmonic major'],
     harmony: { substitution:{A:['A','B'],B:['A','C'],C:['A']}, start:'A', chordDegreeMap:{A:0,B:3,C:5} },
-    voices: {
-      lead:{wave:'triangle',gain:.42,filterHz:2100,pan:-.15},
-      counter:{wave:'sine',gain:.3,filterHz:950,pan:.2},
-      bass:{wave:'sine',gain:.5,filterHz:480,pan:0},
-      arp:{wave:'triangle',gain:.26,filterHz:2800,pan:-.3,complexityOnset:.25,complexityRamp:.3},
+    voices: { lead:{wave:'triangle',gain:.42,filterHz:2100,pan:-.15}, counter:{wave:'sine',gain:.3,filterHz:950,pan:.2},
+      bass:{wave:'sine',gain:.5,filterHz:480,pan:0}, arp:{wave:'triangle',gain:.26,filterHz:2800,pan:-.3,complexityOnset:.25,complexityRamp:.3},
       perc:{gain:.4,pan:.25,complexityOnset:.4,complexityRamp:.3,hitFreqLow:820,hitFreqHigh:4800},
-      sparkle:{wave:'sine',gain:.32,filterHz:3800,pan:.1,complexityOnset:.55,complexityRamp:.3},
-    },
+      sparkle:{wave:'sine',gain:.32,filterHz:3800,pan:.1,complexityOnset:.55,complexityRamp:.3} },
     pad:{ wave:'sawtooth', gain:.14, filterHz:600, layers:[{semis:0,lfoPeriodSec:21.1},{semis:4,lfoPeriodSec:26.3},{semis:7,lfoPeriodSec:31.7},{semis:11,lfoPeriodSec:38.9}] },
     synth:{ attack:.02, release:.4, reverbSeconds:2.8, reverbMix:.28, delayTime:.36, delayFeedback:.35, delayMix:.22 },
-    evolution:{ scaleMorphPeriodSec:200, keyDriftSemis:3, keyDriftPeriodsSec:[113,167,223], tempoDriftBpm:4, tempoDriftPeriodsSec:[179,239], brightnessDriftPeriodsSec:[47,71,113], brightnessDepth:.3, spacePeriodsSec:[139,191], spaceDepth:.35, dynamicsPeriodsSec:[233,307], dynamicsDepth:.11, harmonicRhythmRangeSec:[17,7] },
-  },
+    evolution:{ scaleMorphPeriodSec:200, keyDriftSemis:3, keyDriftPeriodsSec:[113,167,223], tempoDriftBpm:4, tempoDriftPeriodsSec:[179,239], brightnessDriftPeriodsSec:[47,71,113], brightnessDepth:.3, spacePeriodsSec:[139,191], spaceDepth:.35, dynamicsPeriodsSec:[233,307], dynamicsDepth:.11, harmonicRhythmRangeSec:[17,7] } },
+
+  { name: 'Monsoon', root: 174.61, bpm: 84,
+    scalePalette: [ [0,2,3,5,7,9,10],[0,2,3,5,7,8,10],[0,2,4,5,7,9,10],[0,1,3,5,7,8,10] ],
+    scaleNames: ['dorian','minor','mixolydian','phrygian'],
+    harmony: { substitution:{A:['A','B'],B:['A','C'],C:['A']}, start:'A', chordDegreeMap:{A:0,B:3,C:4} },
+    voices: { lead:{wave:'triangle',gain:.4,filterHz:2000,pan:-.15}, counter:{wave:'sine',gain:.28,filterHz:900,pan:.2},
+      bass:{wave:'sine',gain:.5,filterHz:450,pan:0}, arp:{wave:'triangle',gain:.3,filterHz:2600,pan:-.3,complexityOnset:.15,complexityRamp:.3},
+      perc:{gain:.6,pan:.3,complexityOnset:.1,complexityRamp:.25,hitFreqLow:600,hitFreqHigh:3600},
+      sparkle:{wave:'sine',gain:.28,filterHz:4000,pan:.1,complexityOnset:.5,complexityRamp:.3} },
+    pad:{ wave:'sawtooth', gain:.12, filterHz:550, layers:[{semis:0,lfoPeriodSec:17.3},{semis:5,lfoPeriodSec:21.7},{semis:7,lfoPeriodSec:26.1},{semis:10,lfoPeriodSec:33.3}] },
+    synth:{ attack:.015, release:.3, reverbSeconds:2.4, reverbMix:.22, delayTime:.32, delayFeedback:.34, delayMix:.24 },
+    evolution:{ scaleMorphPeriodSec:190, keyDriftSemis:3, keyDriftPeriodsSec:[107,151,199], tempoDriftBpm:5, tempoDriftPeriodsSec:[163,229], brightnessDriftPeriodsSec:[37,61,89], brightnessDepth:.32, spacePeriodsSec:[127,181], spaceDepth:.3, dynamicsPeriodsSec:[211,271], dynamicsDepth:.12, harmonicRhythmRangeSec:[16,7] } },
+
+  { name: 'Frost', root: 349.23, bpm: 58,
+    scalePalette: [ [0,2,4,5,7,9,11],[0,2,4,6,7,9,11],[0,2,4,5,7,9,10],[0,2,4,6,8,9,11] ],
+    scaleNames: ['major','lydian','mixolydian','lydian+'],
+    harmony: { substitution:{A:['A','B'],B:['A']}, start:'A', chordDegreeMap:{A:0,B:5} },
+    voices: { lead:{wave:'sine',gain:.34,filterHz:3800,pan:-.1}, counter:{wave:'triangle',gain:.2,filterHz:1600,pan:.2},
+      bass:{wave:'sine',gain:.4,filterHz:500,pan:0}, arp:{wave:'sine',gain:.32,filterHz:5600,pan:-.25,complexityOnset:.1,complexityRamp:.3},
+      perc:{gain:.22,pan:.25,complexityOnset:.7,complexityRamp:.25,hitFreqLow:1400,hitFreqHigh:8200},
+      sparkle:{wave:'triangle',gain:.42,filterHz:6800,pan:.15,complexityOnset:.3,complexityRamp:.3} },
+    pad:{ wave:'sine', gain:.1, filterHz:1400, layers:[{semis:0,lfoPeriodSec:24.1},{semis:4,lfoPeriodSec:29.3},{semis:7,lfoPeriodSec:34.7},{semis:11,lfoPeriodSec:41.3}] },
+    synth:{ attack:.01, release:.55, reverbSeconds:3.6, reverbMix:.3, delayTime:.5, delayFeedback:.3, delayMix:.2 },
+    evolution:{ scaleMorphPeriodSec:280, keyDriftSemis:2, keyDriftPeriodsSec:[151,211,271], tempoDriftBpm:3, tempoDriftPeriodsSec:[233,307], brightnessDriftPeriodsSec:[61,97,139], brightnessDepth:.25, spacePeriodsSec:[181,251], spaceDepth:.3, dynamicsPeriodsSec:[307,389], dynamicsDepth:.1, harmonicRhythmRangeSec:[22,10] } },
+
+  { name: 'Ember', root: 146.83, bpm: 76,
+    scalePalette: [ [0,2,4,5,7,9,10],[0,2,4,5,7,9,11],[0,2,4,6,7,9,11],[0,2,3,5,7,9,10] ],
+    scaleNames: ['mixolydian','major','lydian','dorian'],
+    harmony: { substitution:{A:['A','B'],B:['A','C'],C:['A']}, start:'A', chordDegreeMap:{A:0,B:4,C:3} },
+    voices: { lead:{wave:'sawtooth',gain:.34,filterHz:2200,pan:-.15}, counter:{wave:'triangle',gain:.26,filterHz:1100,pan:.2},
+      bass:{wave:'triangle',gain:.48,filterHz:600,pan:0}, arp:{wave:'triangle',gain:.26,filterHz:2800,pan:-.3,complexityOnset:.25,complexityRamp:.3},
+      perc:{gain:.42,pan:.28,complexityOnset:.3,complexityRamp:.25,hitFreqLow:700,hitFreqHigh:4400},
+      sparkle:{wave:'triangle',gain:.3,filterHz:4400,pan:.12,complexityOnset:.5,complexityRamp:.3} },
+    pad:{ wave:'sawtooth', gain:.16, filterHz:700, layers:[{semis:0,lfoPeriodSec:18.7},{semis:4,lfoPeriodSec:22.3},{semis:7,lfoPeriodSec:27.9},{semis:10,lfoPeriodSec:34.1}] },
+    synth:{ attack:.02, release:.35, reverbSeconds:2.6, reverbMix:.24, delayTime:.38, delayFeedback:.3, delayMix:.2 },
+    evolution:{ scaleMorphPeriodSec:210, keyDriftSemis:3, keyDriftPeriodsSec:[121,173,229], tempoDriftBpm:5, tempoDriftPeriodsSec:[187,251], brightnessDriftPeriodsSec:[43,73,107], brightnessDepth:.3, spacePeriodsSec:[149,199], spaceDepth:.3, dynamicsPeriodsSec:[241,311], dynamicsDepth:.1, harmonicRhythmRangeSec:[18,8] } },
+
+  { name: 'Static', root: 130.81, bpm: 40,
+    scalePalette: [ [0,1,3,5,6,8,10],[0,1,3,5,7,8,10],[0,2,3,5,7,8,11],[0,2,3,5,7,8,10] ],
+    scaleNames: ['locrian','phrygian','harmonic minor','minor'],
+    harmony: { substitution:{A:['A','B'],B:['A']}, start:'A', chordDegreeMap:{A:0,B:0} },
+    voices: { lead:{wave:'sine',gain:.22,filterHz:900,pan:-.1}, counter:{wave:'sine',gain:.18,filterHz:600,pan:.15},
+      bass:{wave:'sine',gain:.6,filterHz:280,pan:0}, arp:{wave:'sine',gain:.14,filterHz:1600,pan:-.2,complexityOnset:.6,complexityRamp:.3},
+      perc:{gain:.18,pan:.2,complexityOnset:.9,complexityRamp:.1,hitFreqLow:350,hitFreqHigh:5000},
+      sparkle:{wave:'sine',gain:.2,filterHz:4200,pan:.15,complexityOnset:.85,complexityRamp:.15} },
+    pad:{ wave:'sawtooth', gain:.28, filterHz:380, layers:[{semis:0,lfoPeriodSec:41.1},{semis:6,lfoPeriodSec:47.7},{semis:7,lfoPeriodSec:53.9},{semis:10,lfoPeriodSec:61.3}] },
+    synth:{ attack:.08, release:.7, reverbSeconds:6.5, reverbMix:.45, delayTime:.7, delayFeedback:.45, delayMix:.32 },
+    evolution:{ scaleMorphPeriodSec:480, keyDriftSemis:2, keyDriftPeriodsSec:[281,367,443], tempoDriftBpm:2, tempoDriftPeriodsSec:[331,421], brightnessDriftPeriodsSec:[113,167,223], brightnessDepth:.2, spacePeriodsSec:[251,337], spaceDepth:.3, dynamicsPeriodsSec:[389,467], dynamicsDepth:.13, harmonicRhythmRangeSec:[40,22] } },
+
+  { name: 'Voyage', root: 164.81, bpm: 66,
+    scalePalette: [ [0,2,3,5,7,8,10],[0,2,3,5,7,8,11],[0,2,3,5,7,9,11],[0,2,3,5,7,9,10] ],
+    scaleNames: ['minor','harmonic minor','melodic minor','dorian'],
+    harmony: { substitution:{A:['A','B'],B:['A','C'],C:['A']}, start:'A', chordDegreeMap:{A:0,B:5,C:4} },
+    voices: { lead:{wave:'triangle',gain:.46,filterHz:2000,pan:-.15}, counter:{wave:'sine',gain:.32,filterHz:1000,pan:.2},
+      bass:{wave:'sine',gain:.55,filterHz:420,pan:0}, arp:{wave:'triangle',gain:.24,filterHz:2600,pan:-.3,complexityOnset:.3,complexityRamp:.3},
+      perc:{gain:.3,pan:.25,complexityOnset:.55,complexityRamp:.25,hitFreqLow:600,hitFreqHigh:4200},
+      sparkle:{wave:'sine',gain:.36,filterHz:4600,pan:.12,complexityOnset:.5,complexityRamp:.3} },
+    pad:{ wave:'sawtooth', gain:.2, filterHz:600, layers:[{semis:0,lfoPeriodSec:27.3},{semis:7,lfoPeriodSec:33.7},{semis:12,lfoPeriodSec:39.1},{semis:15,lfoPeriodSec:46.7}] },
+    synth:{ attack:.03, release:.5, reverbSeconds:4.4, reverbMix:.34, delayTime:.48, delayFeedback:.36, delayMix:.26 },
+    evolution:{ scaleMorphPeriodSec:260, keyDriftSemis:4, keyDriftPeriodsSec:[151,211,277], tempoDriftBpm:4, tempoDriftPeriodsSec:[223,293], brightnessDriftPeriodsSec:[59,89,131], brightnessDepth:.3, spacePeriodsSec:[173,233], spaceDepth:.38, dynamicsPeriodsSec:[293,367], dynamicsDepth:.16, harmonicRhythmRangeSec:[24,11] } },
+
+  { name: 'Neon', root: 233.08, bpm: 118,
+    scalePalette: [ [0,2,3,5,7,9,10],[0,2,4,5,7,9,10],[0,2,3,5,7,8,10],[0,1,4,5,7,8,10] ],
+    scaleNames: ['dorian','mixolydian','minor','phrygian dom'],
+    harmony: { substitution:{A:['A','B','A'],B:['A','C'],C:['B']}, start:'A', chordDegreeMap:{A:0,B:3,C:4} },
+    voices: { lead:{wave:'sawtooth',gain:.3,filterHz:3000,pan:-.2}, counter:{wave:'square',gain:.2,filterHz:1400,pan:.25},
+      bass:{wave:'square',gain:.5,filterHz:750,pan:0}, arp:{wave:'sawtooth',gain:.26,filterHz:4200,pan:-.3,complexityOnset:.05,complexityRamp:.2},
+      perc:{gain:.58,pan:.3,complexityOnset:.02,complexityRamp:.15,hitFreqLow:800,hitFreqHigh:4600},
+      sparkle:{wave:'square',gain:.28,filterHz:5600,pan:.15,complexityOnset:.3,complexityRamp:.25} },
+    pad:{ wave:'square', gain:.07, filterHz:1000, layers:[{semis:0,lfoPeriodSec:9.7},{semis:7,lfoPeriodSec:11.9},{semis:10,lfoPeriodSec:14.3},{semis:12,lfoPeriodSec:16.7}] },
+    synth:{ attack:.003, release:.18, reverbSeconds:1.1, reverbMix:.14, delayTime:.19, delayFeedback:.32, delayMix:.2 },
+    evolution:{ scaleMorphPeriodSec:110, keyDriftSemis:2, keyDriftPeriodsSec:[71,97,131], tempoDriftBpm:5, tempoDriftPeriodsSec:[113,157], brightnessDriftPeriodsSec:[27,43,67], brightnessDepth:.32, spacePeriodsSec:[83,119], spaceDepth:.22, dynamicsPeriodsSec:[139,181], dynamicsDepth:.09, harmonicRhythmRangeSec:[9,3.5] } },
+
+  { name: 'Paper', root: 293.66, bpm: 84,
+    scalePalette: [ [0,2,4,5,7,9,11],[0,2,4,6,7,9,11],[0,2,3,5,7,9,10],[0,2,4,5,7,9,10] ],
+    scaleNames: ['major','lydian','dorian','mixolydian'],
+    harmony: { substitution:{A:['A','B'],B:['A','C'],C:['A']}, start:'A', chordDegreeMap:{A:0,B:3,C:5} },
+    voices: { lead:{wave:'sine',gain:.3,filterHz:2600,pan:-.12}, counter:{wave:'triangle',gain:.2,filterHz:1300,pan:.18},
+      bass:{wave:'sine',gain:.34,filterHz:520,pan:0}, arp:{wave:'sine',gain:.22,filterHz:3600,pan:-.22,complexityOnset:.2,complexityRamp:.3},
+      perc:{gain:.24,pan:.22,complexityOnset:.6,complexityRamp:.25,hitFreqLow:1000,hitFreqHigh:5800},
+      sparkle:{wave:'sine',gain:.26,filterHz:5200,pan:.12,complexityOnset:.45,complexityRamp:.3} },
+    pad:{ wave:'sine', gain:.08, filterHz:1100, layers:[{semis:0,lfoPeriodSec:16.1},{semis:4,lfoPeriodSec:19.7},{semis:7,lfoPeriodSec:23.3},{semis:11,lfoPeriodSec:28.9}] },
+    synth:{ attack:.015, release:.4, reverbSeconds:1.8, reverbMix:.18, delayTime:.3, delayFeedback:.26, delayMix:.16 },
+    evolution:{ scaleMorphPeriodSec:170, keyDriftSemis:2, keyDriftPeriodsSec:[97,139,181], tempoDriftBpm:4, tempoDriftPeriodsSec:[151,211], brightnessDriftPeriodsSec:[37,59,89], brightnessDepth:.25, spacePeriodsSec:[113,157], spaceDepth:.22, dynamicsPeriodsSec:[191,241], dynamicsDepth:.08, harmonicRhythmRangeSec:[15,6] } },
 ];
+
+/* ---- lookup tables for the Custom builder ------------------------------- */
+const NOTE_OPTIONS = [
+  ['C2',65.41],['D2',73.42],['E2',82.41],['F2',87.31],['G2',98.00],['A2',110.00],['B2',123.47],
+  ['C3',130.81],['D3',146.83],['E3',164.81],['F3',174.61],['G3',196.00],['A3',220.00],['B3',246.94],
+  ['C4',261.63],['D4',293.66],['E4',329.63],['F4',349.23],['G4',392.00],['A4',440.00],['B4',493.88],['C5',523.25],
+];
+
+const MODE_PALETTES = {
+  moonlit: { label:'Moonlit (minor)', scalePalette:[[0,2,3,5,7,8,10],[0,2,3,5,7,9,10],[0,1,3,5,7,8,10],[0,2,4,6,7,9,11]], scaleNames:['minor','dorian','phrygian','lydian'] },
+  daylight: { label:'Daylight (major)', scalePalette:[[0,2,4,5,7,9,11],[0,2,4,6,7,9,11],[0,2,4,5,7,9,10],[0,2,4,6,8,9,11]], scaleNames:['major','lydian','mixolydian','lydian+'] },
+  exotic: { label:'Exotic', scalePalette:[[0,1,4,5,7,8,11],[0,2,3,6,7,8,10],[0,1,4,5,7,9,10],[0,2,4,5,7,8,11]], scaleNames:['phrygian dom','locrian ♮2','double harmonic','harmonic major'] },
+  ambient: { label:'Ambient', scalePalette:[[0,2,3,5,7,8,10],[0,2,3,5,7,8,11],[0,2,3,5,7,9,11],[0,1,3,5,6,8,10]], scaleNames:['minor','harmonic minor','melodic minor','locrian'] },
+  modal: { label:'Modal (bright)', scalePalette:[[0,2,3,5,7,9,10],[0,2,4,5,7,9,10],[0,2,3,5,7,8,10],[0,2,4,5,7,9,11]], scaleNames:['dorian','mixolydian','minor','major'] },
+};
+
+const TIMBRE_PRESETS = {
+  warm: { label:'Warm', lead:'triangle',leadFilter:2200, counter:'sine',counterFilter:1000, bass:'sine',bassFilter:500, arp:'triangle',arpFilter:2800, sparkle:'sine',sparkleFilter:4200, padWave:'sawtooth' },
+  bright: { label:'Bright', lead:'square',leadFilter:3200, counter:'triangle',counterFilter:1600, bass:'sine',bassFilter:600, arp:'sawtooth',arpFilter:4000, sparkle:'triangle',sparkleFilter:5600, padWave:'sine' },
+  glassy: { label:'Glassy', lead:'sine',leadFilter:3800, counter:'triangle',counterFilter:1800, bass:'sine',bassFilter:500, arp:'sine',arpFilter:5200, sparkle:'triangle',sparkleFilter:6400, padWave:'sine' },
+  gritty: { label:'Gritty', lead:'sawtooth',leadFilter:2400, counter:'square',counterFilter:1200, bass:'triangle',bassFilter:700, arp:'square',arpFilter:3400, sparkle:'square',sparkleFilter:5000, padWave:'square' },
+  soft: { label:'Soft', lead:'sine',leadFilter:1800, counter:'sine',counterFilter:900, bass:'sine',bassFilter:400, arp:'sine',arpFilter:2600, sparkle:'sine',sparkleFilter:3800, padWave:'sine' },
+};
+
+const CHORD_PATTERNS = {
+  simple: { label:'Simple (i–v)', substitution:{A:['A','B'],B:['A']}, start:'A', chordDegreeMap:{A:0,B:4} },
+  classic: { label:'Classic (i–vi–iv)', substitution:{A:['A','B'],B:['A','C'],C:['A']}, start:'A', chordDegreeMap:{A:0,B:5,C:3} },
+  bright: { label:'Bright (I–V–vi)', substitution:{A:['A','B'],B:['A','C'],C:['A']}, start:'A', chordDegreeMap:{A:0,B:4,C:5} },
+  wandering: { label:'Wandering (i–iv–v)', substitution:{A:['A','B'],B:['A','C'],C:['A']}, start:'A', chordDegreeMap:{A:0,B:3,C:4} },
+  drone: { label:'Static drone', substitution:{A:['A','B'],B:['A']}, start:'A', chordDegreeMap:{A:0,B:0} },
+};
 
 /* ============================================================================
    ENGINE
@@ -293,8 +488,7 @@ function lerp(a, b, f) { return a + (b - a) * f; }
 const EV = CONFIG.evolution;
 const HARM = CONFIG.harmony;
 
-function applyTheme(idx) {
-  const th = THEMES[idx];
+function applyThemeObject(th) {
   CONFIG.root = th.root;
   CONFIG.bpm = th.bpm;
   EV.scalePalette = th.scalePalette;
@@ -308,7 +502,48 @@ function applyTheme(idx) {
   Object.assign(EV, th.evolution);
   currentThemeName = th.name;
 }
-applyTheme(0);
+applyThemeObject(THEMES[0]);
+
+function buildCustomTheme() {
+  const root = parseFloat(cfRoot.value);
+  const bpm = parseInt(cfBpm.value, 10);
+  const mode = MODE_PALETTES[cfMode.value];
+  const timbre = TIMBRE_PRESETS[cfTimbre.value];
+  const space = parseFloat(cfSpace.value);
+  const chord = CHORD_PATTERNS[cfChord.value];
+  const keyDrift = parseFloat(cfKeyDrift.value);
+  const morph = parseFloat(cfMorph.value);
+  const harmLow = parseFloat(cfHarmLow.value);
+  const harmHigh = Math.min(parseFloat(cfHarmHigh.value), harmLow - 1);
+  const delayTime = parseFloat(cfDelayTime.value);
+  const delayFeedback = parseFloat(cfDelayFeedback.value);
+  const delayMix = parseFloat(cfDelayMix.value);
+  const tone = parseFloat(cfPercTone.value);
+  const padGain = parseFloat(cfPadGain.value);
+  const gains = { lead:parseFloat(cfGainLead.value), counter:parseFloat(cfGainCounter.value), bass:parseFloat(cfGainBass.value),
+                   arp:parseFloat(cfGainArp.value), perc:parseFloat(cfGainPerc.value), sparkle:parseFloat(cfGainSparkle.value) };
+
+  return {
+    name: 'Custom',
+    root, bpm,
+    scalePalette: mode.scalePalette, scaleNames: mode.scaleNames,
+    harmony: { substitution: chord.substitution, start: chord.start, chordDegreeMap: chord.chordDegreeMap },
+    voices: {
+      lead: { wave: timbre.lead, gain: gains.lead, filterHz: timbre.leadFilter, pan:-.15 },
+      counter: { wave: timbre.counter, gain: gains.counter, filterHz: timbre.counterFilter, pan:.2 },
+      bass: { wave: timbre.bass, gain: gains.bass, filterHz: timbre.bassFilter, pan:0 },
+      arp: { wave: timbre.arp, gain: gains.arp, filterHz: timbre.arpFilter, pan:-.3, complexityOnset:.2, complexityRamp:.35 },
+      perc: { gain: gains.perc, pan:.3, complexityOnset:.45, complexityRamp:.3, hitFreqLow: lerp(400,1200,tone), hitFreqHigh: lerp(3200,8000,tone) },
+      sparkle: { wave: timbre.sparkle, gain: gains.sparkle, filterHz: timbre.sparkleFilter, pan:.1, complexityOnset:.6, complexityRamp:.3 },
+    },
+    pad: { wave: timbre.padWave, gain: padGain, filterHz: 700,
+      layers: [ {semis:0,lfoPeriodSec:19.7},{semis:7,lfoPeriodSec:23.3},{semis:12,lfoPeriodSec:29.9},{semis:15,lfoPeriodSec:37.1} ] },
+    synth: { attack:.02, release:.35, reverbSeconds: lerp(1.2,5.5,space), reverbMix: lerp(.14,.42,space), delayTime, delayFeedback, delayMix },
+    evolution: { scaleMorphPeriodSec: morph, keyDriftSemis: keyDrift, keyDriftPeriodsSec:[131,197,281], tempoDriftBpm:5, tempoDriftPeriodsSec:[211,307],
+      brightnessDriftPeriodsSec:[53,89,149], brightnessDepth:.35, spacePeriodsSec:[163,229], spaceDepth: space * 0.5,
+      dynamicsPeriodsSec:[281,373], dynamicsDepth:.1, harmonicRhythmRangeSec:[harmLow, harmHigh] },
+  };
+}
 
 function keyDriftSemisAt(t) { return quasi(t, EV.keyDriftPeriodsSec) * EV.keyDriftSemis; }
 
@@ -614,14 +849,48 @@ const visualizer = (() => {
 
 /* ---- transport / UI ----------------------------------------------------- */
 const playBtn = document.getElementById('playBtn');
+const customBtn = document.getElementById('customBtn');
+const customPanel = document.getElementById('customPanel');
+const customFieldset = document.getElementById('customFieldset');
 const volSlider = document.getElementById('volSlider');
 const complexitySlider = document.getElementById('complexitySlider');
 const themeSelect = document.getElementById('themeSelect');
 const elapsedEl = document.getElementById('elapsed');
 const statusEl = document.getElementById('eviStatus');
 
-themeSelect.innerHTML = '<option value="random">🎲 random</option>' +
-  THEMES.map((t, i) => `<option value="${i}">${t.name}</option>`).join('');
+themeSelect.innerHTML = '<option value="random">Random</option>' +
+  THEMES.map((t, i) => `<option value="${i}">${t.name}</option>`).join('') +
+  '<option value="custom">Custom</option>';
+
+const cfRoot = document.getElementById('cfRoot');
+cfRoot.innerHTML = NOTE_OPTIONS.map(([label, hz]) => `<option value="${hz}"${label==='A3'?' selected':''}>${label}</option>`).join('');
+const cfMode = document.getElementById('cfMode');
+cfMode.innerHTML = Object.entries(MODE_PALETTES).map(([k,v]) => `<option value="${k}"${k==='moonlit'?' selected':''}>${v.label}</option>`).join('');
+const cfTimbre = document.getElementById('cfTimbre');
+cfTimbre.innerHTML = Object.entries(TIMBRE_PRESETS).map(([k,v]) => `<option value="${k}"${k==='warm'?' selected':''}>${v.label}</option>`).join('');
+const cfChord = document.getElementById('cfChord');
+cfChord.innerHTML = Object.entries(CHORD_PATTERNS).map(([k,v]) => `<option value="${k}"${k==='classic'?' selected':''}>${v.label}</option>`).join('');
+
+const cfIds = ['cfBpm','cfSpace','cfKeyDrift','cfMorph','cfHarmLow','cfHarmHigh','cfDelayTime','cfDelayFeedback',
+  'cfDelayMix','cfPercTone','cfPadGain','cfGainLead','cfGainCounter','cfGainBass','cfGainArp','cfGainPerc','cfGainSparkle'];
+cfIds.forEach(id => {
+  const el = document.getElementById(id);
+  const out = document.getElementById(id + 'Val');
+  if (!out) return;
+  const update = () => { out.textContent = el.value; };
+  el.addEventListener('input', update);
+  update();
+});
+
+function setCustomMode() {
+  themeSelect.value = 'custom';
+  customPanel.hidden = false;
+}
+customBtn.addEventListener('click', () => {
+  if (themeSelect.value === 'custom' && !customPanel.hidden) customPanel.hidden = true;
+  else setCustomMode();
+});
+themeSelect.addEventListener('change', () => { customPanel.hidden = themeSelect.value !== 'custom'; });
 
 function formatElapsed(sec) {
   const m = Math.floor(sec / 60).toString().padStart(2, '0');
@@ -648,8 +917,11 @@ function start() {
   if (ctx.state === 'suspended') ctx.resume();
 
   const sel = themeSelect.value;
-  const themeIdx = sel === 'random' ? Math.floor(Math.random() * THEMES.length) : parseInt(sel, 10);
-  applyTheme(themeIdx);
+  let themeObj;
+  if (sel === 'random') themeObj = THEMES[Math.floor(Math.random() * THEMES.length)];
+  else if (sel === 'custom') themeObj = buildCustomTheme();
+  else themeObj = THEMES[parseInt(sel, 10)];
+  applyThemeObject(themeObj);
 
   sessionOffset = Math.random() * 100000;
 
@@ -675,6 +947,7 @@ function start() {
   statusTimer = setInterval(updateStatus, 1000);
   updateStatus();
   playBtn.textContent = '■ Stop'; playBtn.classList.add('playing');
+  themeSelect.disabled = true; customBtn.disabled = true; customFieldset.disabled = true;
 }
 function stop() {
   running = false;
@@ -683,6 +956,7 @@ function stop() {
   if (masterGain) masterGain.gain.setTargetAtTime(0, ctx.currentTime, 0.08);
   setTimeout(() => { if (ctx) ctx.suspend(); }, 200);
   playBtn.textContent = '▶ Play'; playBtn.classList.remove('playing');
+  themeSelect.disabled = false; customBtn.disabled = false; customFieldset.disabled = false;
   visualizer.clear();
   elapsedEl.textContent = '00:00';
   statusEl.textContent = '—';
