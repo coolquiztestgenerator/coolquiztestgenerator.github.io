@@ -2,8 +2,18 @@
 <html lang="en">
 
 <head>
+  <!-- Load KaTeX CSS -->
+  <link rel="stylesheet" href="https://jsdelivr.net">
+
+  <!-- Load KaTeX JS script -->
+  <script defer src="https://jsdelivr.net"></script>
+
+  <!-- Load the Auto-render extension to parse text for math formulas -->
+  <script defer src="https://jsdelivr.net" onload="renderMathInElement(document.body);"></script>
+
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+
   <title>Quiz Generator</title>
   <style>
     :root {
@@ -922,6 +932,15 @@ You must respond with ONLY a JSON object in exactly this format:
     }
   ]
 }
+When writing an equation, use this KaTeX formatting:
+<p>
+  This is an inline equation: \( E = mc^2 \)
+</p>
+
+<p>
+  This is a block equation:
+  $$ \int_{a}^{b} f(x) \,dx = F(b) - F(a) $$
+</p>
 
 Required number of questions:
 - Multiple Choice Questions (MCQs): ${mcqs}
@@ -933,7 +952,7 @@ Requirements:
 3. For MCQs, ensure one answer is clearly correct.
 4. ${full ? 'Include detailed example answers for FRQs' : 'Keep example answers brief'}
 5. Return ONLY the JSON object - no other text wrapper outside markdown if any, prefer naked JSON string.
-6. DO NOT return invalid json, it also must not use LaTeX, and be usable with raw data reading.
+6. DO NOT return invalid json, it uses KaTeX, and have it be usable with raw data reading.
 7. If the user responds a prompt that you are unable to fulfill, respond with a placeholder question, not with something that would invalidate the json.
 
 Remember: Your entire response must be a valid JSON object that can be parsed with JSON.parse().`;
