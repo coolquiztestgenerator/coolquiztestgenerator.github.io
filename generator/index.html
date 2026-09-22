@@ -303,6 +303,18 @@
       border-radius: 8px;
       margin-bottom: 12px;
     }
+    /* Hides editor panel when a user opens a shared test link */
+body.quiz-mode .panel {
+  grid-template-columns: 1fr;
+}
+body.quiz-mode aside.card,
+body.quiz-mode header .controls,
+body.quiz-mode .api-section,
+body.quiz-mode #promptSection,
+body.quiz-mode label[style*="margin-top"],
+body.quiz-mode div[style*="border-top"] {
+  display: none !important;
+}
   </style>
 </head>
 
@@ -319,6 +331,7 @@
         <button id="importJsonBtn" class="secondary">Import JSON</button>
         <input type="file" id="importJsonInput" accept=".json" style="display:none;" />
         <button id="shareLinkBtn" class="secondary">🔗 Share Link</button>
+        <button id="shareQuizLinkBtn" class="accent">🔗 Share Quiz Link</button>
         <button id="downloadBtn" class="accent">Generate & Download Quiz</button>
       </div>
     </header>
@@ -432,6 +445,76 @@
   </div>
 
   <script>
+    const shareQuizLinkBtn = document.getElementById('shareQuizLinkBtn');
+
+// 1. Generate a shareable URL that opens directly in Quiz Mode
+shareQuizLinkBtn.onclick = async () => {
+  if (!state.questions.length) return alert('Add some questions first!');
+
+  // Pack title and question data
+  const quizData = {
+    title: quizTitle.value || 'Quiz',
+    questions: state.questions,
+    options: {
+      shuffleQuestions: shuffleQs.checked,
+      shuffleChoices: shuffleChoices.checked,
+      includeFrqExamples: includeFrqExamples.checked,
+      dark: darkToggle.checked
+    }
+  };
+
+  // Compress data with LZ-String
+  const jsonString = JSON.stringify(quizData);
+  const compressed = LZString.compressToEncodedURIComponent(jsonString);
+
+  // Use #take= hash to differentiate taking a test from editing one
+  const shareableUrl = `${window.location.origin}${window.location.pathname}#take=${compressed}`;
+
+  try {
+    await navigator.clipboard.writeText(shareableUrl);
+    const originalText = shareQuizLinkBtn.textContent;
+    shareQuizLinkBtn.textContent = '✓ Quiz Link Copied!';
+    setTimeout(() => shareQuizLinkBtn.textContent = originalText, 2000);
+  } catch (err) {
+    console.error('Failed to copy link:', err);
+    prompt('Copy this shareable quiz link:', shareableUrl);
+  }
+};
+
+// 2. Automatically load and present the interactive quiz when #take= is present in URL
+function loadInteractiveQuizFromHash() {
+  const hash = window.location.hash;
+  
+  if (hash.startsWith('#take=')) {
+    const compressedData = hash.replace('#take=', '');
+    try {
+      const jsonString = LZString.decompressFromEncodedURIComponent(compressedData);
+      if (jsonString) {
+        const data = JSON.parse(jsonString);
+        
+        // Hide generator UI elements
+        document.body.classList.add('quiz-mode');
+        
+        // Populate and build the interactive HTML inside the main section
+        const generatedHtml = buildQuizHTML(data.questions, data.options?.dark || false, {
+          title: data.title || 'Quiz',
+          shuffleQuestions: data.options?.shuffleQuestions,
+          shuffleChoices: data.options?.shuffleChoices,
+          includeFrqExamples: data.options?.includeFrqExamples
+        });
+
+        // Replace page content with the rendered quiz view
+        document.body.innerHTML = generatedHtml;
+      }
+    } catch (err) {
+      console.error('Failed to parse quiz link:', err);
+      alert('The quiz link appears to be invalid or broken.');
+    }
+  }
+}
+
+// Run check on initial load
+window.addEventListener('DOMContentLoaded', loadInteractiveQuizFromHash);
     // Helpers
     const shareLinkBtn = document.getElementById('shareLinkBtn');
 
