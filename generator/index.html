@@ -7,7 +7,8 @@
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
-
+  <!-- Load LZ-String library for URL compression -->
+  <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
 
@@ -317,6 +318,7 @@
         <button id="exportJsonBtn" class="secondary">Export JSON</button>
         <button id="importJsonBtn" class="secondary">Import JSON</button>
         <input type="file" id="importJsonInput" accept=".json" style="display:none;" />
+        <button id="shareLinkBtn" class="secondary">🔗 Share Link</button>
         <button id="downloadBtn" class="accent">Generate & Download Quiz</button>
       </div>
     </header>
@@ -431,6 +433,57 @@
 
   <script>
     // Helpers
+    const shareLinkBtn = document.getElementById('shareLinkBtn');
+
+// Handler to generate and copy shareable URL
+shareLinkBtn.onclick = async () => {
+  if (!state.questions.length) return alert('Add some questions first!');
+
+  // Pack title and questions
+  const quizData = {
+    title: quizTitle.value || 'Quiz',
+    questions: state.questions
+  };
+
+  // 1. Compress quiz data to string
+  const jsonString = JSON.stringify(quizData);
+  const compressed = LZString.compressToEncodedURIComponent(jsonString);
+
+  // 2. Build URL using hash #quiz=
+  const shareableUrl = `${window.location.origin}${window.location.pathname}#quiz=${compressed}`;
+
+  // 3. Copy link to clipboard
+  try {
+    await navigator.clipboard.writeText(shareableUrl);
+    const originalText = shareLinkBtn.textContent;
+    shareLinkBtn.textContent = '✓ Link Copied!';
+    setTimeout(() => shareLinkBtn.textContent = originalText, 2000);
+  } catch (err) {
+    console.error('Failed to copy link:', err);
+    prompt('Copy this share link:', shareableUrl);
+  }
+};
+    // Function to check URL hash and import stored quiz data automatically
+function loadQuizFromHash() {
+  const hash = window.location.hash;
+  if (hash.startsWith('#quiz=')) {
+    const compressedData = hash.replace('#quiz=', '');
+    try {
+      // Decompress the URL payload back to JSON string
+      const jsonString = LZString.decompressFromEncodedURIComponent(compressedData);
+      if (jsonString) {
+        // Use existing import handler
+        importQuizData(jsonString);
+      }
+    } catch (err) {
+      console.error('Failed to parse URL quiz data:', err);
+      alert('The share link appears to be invalid or broken.');
+    }
+  }
+}
+
+// Check for hash link on page load
+window.addEventListener('DOMContentLoaded', loadQuizFromHash);
     function escapeHtml(s) {
       return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
