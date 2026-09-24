@@ -1,0 +1,192 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AP Chemistry - Electrochemistry Quiz</title>
+<link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css](https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css)">
+<script defer src="[https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js](https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js)"></script>
+<script defer src="[https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js](https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js)" onload="renderMathInElement(document.body);"></script>
+<style>
+:root {
+  --bg: #f5f7fb;
+  --card: #ffffffcc;
+  --text: #111827;
+  --muted: #6b7280;
+  --accent: #2563eb;
+  --border: rgba(0, 0, 0, 0.05);
+  --success: #dcfce7;
+  --error: #fee2e2;
+  --correct-text: #15803d;
+  --wrong-text: #b91c1c;
+  --radius: 12px;
+  --shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+  --transition: all 0.25s ease;
+}
+.dark {
+  --bg: #0b1120;
+  --card: #10192caa;
+  --text: #e5e7eb;
+  --muted: #9fb1d1;
+  --accent: #3b82f6;
+  --border: rgba(255, 255, 255, 0.05);
+  --success: rgba(34, 197, 94, 0.1);
+  --error: rgba(239, 68, 68, 0.1);
+  --correct-text: #4ade80;
+  --wrong-text: #f87171;
+  --shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+}
+html, body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  transition: var(--transition);
+}
+.wrap { max-width: 850px; margin: 0 auto; padding: 28px 20px 60px; }
+h2 { margin: 0; font-weight: 600; font-size: 1.6rem; }
+.top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+.card { background: var(--card); backdrop-filter: blur(10px); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); border: 1px solid var(--border); transition: var(--transition); }
+button { cursor: pointer; font-weight: 500; border: none; border-radius: var(--radius); padding: 10px 16px; transition: var(--transition); font-size: 0.95rem; }
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+.accent { background: var(--accent); color: white; box-shadow: 0 3px 10px rgba(37, 99, 235, 0.3); }
+.accent:hover { background: #1d4ed8; transform: translateY(-1px); }
+.secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
+.secondary:hover { background: rgba(0, 0, 0, 0.04); }
+.q { margin-bottom: 20px; padding: 18px; border-radius: var(--radius); border: 1px solid var(--border); background: linear-gradient(180deg, rgba(0,0,0,0.02), transparent); transition: var(--transition); }
+.q:hover { border-color: var(--accent); }
+.q strong { font-weight: 600; font-size: 1rem; }
+label { display: flex; align-items: center; gap: 8px; margin-top: 6px; cursor: pointer; }
+textarea { width: 100%; min-height: 90px; resize: vertical; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); padding: 10px 12px; font-family: inherit; transition: var(--transition); box-sizing: border-box; }
+textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }
+.correct { border-color: var(--success); }
+.correct::after { content: "✓ Correct"; color: var(--correct-text); font-weight: 600; display: block; margin-top: 8px; }
+.wrong { border-color: var(--error); }
+.wrong::after { content: "✗ Incorrect"; color: var(--wrong-text); font-weight: 600; display: block; margin-top: 8px; }
+.correct-answer { color: var(--correct-text); font-weight: 600; position: relative; padding-left: 22px; }
+.correct-answer::before { content: "✓"; position: absolute; left: 0; }
+.example { margin-top: 12px; padding: 14px; background: rgba(0, 0, 0, 0.03); border-radius: 10px; font-style: italic; }
+#score { background: var(--card); border: 1px solid var(--border); padding: 14px; border-radius: var(--radius); box-shadow: var(--shadow); }
+.muted { color: var(--muted); }
+@media (max-width: 600px) { .top { flex-direction: column; align-items: flex-start; } .card { padding: 18px; } }
+</style>
+</head>
+<body class="">
+  <div class="wrap">
+    <div class="top" style="margin-bottom:10px">
+      <h2 style="margin:0">AP Chemistry - Electrochemistry Quiz</h2>
+      <div>
+        <label><input id="darkToggle" type="checkbox"> Dark</label>
+        <button id="viewAnswers" class="secondary">View Answers</button>
+      </div>
+    </div>
+    <div id="quiz" class="card"></div>
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button id="submitBtn" class="accent">Submit</button>
+      <div id="score" class="muted"></div>
+    </div>
+  </div>
+  <script>
+    const questions = [{"type":"mcq","text":"The half-reaction that occurs at the cathode during the electrolysis of molten sodium bromide is","choices":["2Br- -> Br2 + 2e-","Br2 + 2e- -> 2Br-","Na+ + e- -> Na","Na -> Na+ + e-","2H2O + 2e- -> 2OH- + H2"],"correctIndex":2},{"type":"mcq","text":"How many coulombs of charge pass through a cell if 2.40 amperes of current are passed through the cell for 85.0 minutes?","choices":["2.04 x 10^2 C","1.33 x 10^-1 C","1.22 x 10^4 C","2.12 x 10^3 C","3.40 C"],"correctIndex":2},{"type":"mcq","text":"How many moles of chromium would be electroplated by passing a current of 5.2 amperes through a solution of Cr2(SO4)3 for 45.0 minutes?","choices":["0.048 mol","2.9 mol","0.15 mol","6.9 mol","0.073 mol"],"correctIndex":0},{"type":"mcq","text":"An aqueous copper(II) sulfate solution is electrolyzed for 45 minutes. A 3.2 ampere current is used. What mass of copper is produced?","choices":["0.95 g","1.9 g","2.8 g","4.6 g","5.5 g"],"correctIndex":2},{"type":"mcq","text":"Which response contains all the following statements that are correct, and no others?\nI. In voltaic cells the flow of electrons is spontaneous.\nII. In electrolytic cells electrons flow in the external circuit (through the wire) from the anode to the cathode.\nIII. In voltaic cells the cathode is the positive electrode.","choices":["I","III","I and II","II and III","I, II, and III"],"correctIndex":4},{"type":"mcq","text":"A cell is constructed by immersing a strip of lead in a 1.0 M Pb(NO3)2 solution and a strip of silver in a 1.0 M AgNO3 solution. The circuit is completed by a wire and a salt bridge. As the cell operates, the strip of silver gains mass (only silver), and the concentration of silver ions in the solution around the silver strip decreases, while the strip of lead loses mass, and the concentration of lead ions increases in the solution around the lead strip. Which of the following represents the reaction that occurs at the cathode in this cell?","choices":["Pb2+ + 2e- -> Pb","Pb -> Pb2+ + 2e-","Ag+ + e- -> Ag","Ag -> Ag+ + e-","none of the above"],"correctIndex":2},{"type":"mcq","text":"A voltaic cell is constructed by immersing a strip of copper metal in 1.0 M CuSO4 solution and a strip of aluminum in 0.50 M Al2(SO4)3 solution. A wire and a salt bridge complete the circuit. The aluminum strip loses mass, and the concentration of aluminum ions in the solution increases. The copper electrode gains mass, and the concentration of copper ions decreases. Which of the following are applicable to the electrode at which oxidation occurs?\nI. The anode\nII. The cathode\nIII. The positive electrode\nIV. The electrode at which electrons are produced\nV. The negative electrode\nVI. The electrode at which electrons are used up","choices":["I, III, and V","I, IV, and V","II, V, and VI","II, III, and IV","None of the first four responses contains all the correct choices and no others."],"correctIndex":1},{"type":"mcq","text":"Which of the following species is the strongest oxidizing agent?","choices":["Sn2+","Sn4+","Br2","Br-","Li"],"correctIndex":2},{"type":"mcq","text":"Which of the following is the strongest reducing agent?","choices":["K","Ag","Ba","F2","Cu2+"],"correctIndex":0},{"type":"mcq","text":"Which of the following metals is most easily oxidized?","choices":["Cd","Cu","Fe","Ni","Zn"],"correctIndex":4},{"type":"mcq","text":"Which of the following describes the net reaction that occurs in the cell, Cd | Cd2+(1 M) || Cu2+(1 M) | Cu?","choices":["Cu + Cd2+ -> Cu2+ + Cd","Cu + Cd -> Cu2+ + Cd2+","Cu2+ + Cd2+ -> Cu + Cd","Cu2+ + Cd -> Cu + Cd2+","2Cu + Cd2+ -> 2Cu+ + Cd"],"correctIndex":3},{"type":"mcq","text":"Which one of the following reactions is spontaneous (in the direction given) under standard electrochemical conditions?","choices":["Pb2+ + 2I- -> Pb + I2","Cu2+ + Fe -> Cu + Fe2+","2Au + Pt2+ -> 2Au+ + Pt","Mg2+ + 2Br- -> Mg + Br2","2Hg + 2Cl- + 2H+ -> Hg2Cl2 + H2"],"correctIndex":1},{"type":"mcq","text":"What is the numerical value for the standard cell potential for the following reaction?\n2Cr3+(aq) + 3Cu(s) -> 2Cr(s) + 3Cu2+(aq)","choices":["-1.08 V","-0.40 V","0.40 V","1.08 V","2.52 V"],"correctIndex":0},{"type":"mcq","text":"Calculate the standard cell potential for the cell, Cd | Cd2+(1 M) || Cu2+(1 M) | Cu.","choices":["+0.74 V","-0.74 V","+0.06 V","-0.06 V","0.00 V"],"correctIndex":0},{"type":"mcq","text":"Given the following standard electrode potentials:\nO2(g) + 4H+ + 4e- -> 2H2O  (E0 = +1.23 V)\n2CO2(g) + 2H+ + 2e- -> (COOH)2  (E0 = -0.49 V)\nWhich response contains all the true statements and no others? (Assume all species are present under standard electrochemical conditions.)\nI. H2O will spontaneously oxidize (COOH)2 to form CO2.\nII. O2(g) will spontaneously oxidize (COOH)2 to form CO2.\nIII. (COOH)2 will spontaneously reduce O2(g) to form H2O.\nIV. H+ will spontaneously reduce (COOH)2 to form CO2.\nV. CO2 will spontaneously oxidize H2O to form O2(g).","choices":["II, IV, and V","I, III, and IV","II and III","I and IV","III and V"],"correctIndex":2},{"type":"mcq","text":"If a copper-plated iron can is scratched, the iron beneath it corrodes more rapidly than it would without the coating. On the other hand, a galvanized iron can is not oxidized if its coating is scratched. Which statement below about these processes is false?","choices":["Copper is less active than iron.","Zinc is more active than iron.","The zinc is preferentially reduced.","Zinc is acting as a sacrificial anode.","Copper is less easily oxidized than iron."],"correctIndex":2},{"type":"mcq","text":"A zinc bar weighing 3.0 kg is attached to a buried iron pipe to protect the pipe from corrosion. An average current of 0.020 A flows between the bar and the pipe. How many years will be required for the zinc bar to be entirely consumed? (1 yr = 3.16 x 10^7 s)","choices":["600 yr","14.0 yr","5.99 yr","7.00 yr","6.66 yr"],"correctIndex":1},{"type":"mcq","text":"Calculate the reduction potential of the Zn2+/Zn electrode when [Zn2+] = 1.0 x 10^-8 M.","choices":["-0.73 V","-0.75 V","-0.76 V","-0.77 V","-1.00 V"],"correctIndex":4},{"type":"mcq","text":"A cell is constructed by immersing a strip of silver in 0.10 M AgNO3 solution and a strip of lead in 1.0 M Pb(NO3)2 solution. A wire and salt bridge complete the cell. What is the potential of the silver electrode in the cell?","choices":["0.74 V","0.80 V","0.83 V","0.86 V","0.88 V"],"correctIndex":0},{"type":"mcq","text":"Calculate Ecell for the reaction below when [Zn2+] = 1.00 M, [H+] = 1.00 x 10^-6 M, and P_H2 = 1.00 atm.\nZn(s) + 2H+ -> Zn2+ + H2(g)","choices":["+0.41 V","+0.053 V","0.64 V","+1.12 V","+0.76 V"],"correctIndex":0},{"type":"mcq","text":"Calculate the cell potential of the following voltaic cell:\nZn | Zn2+(1.0 x 10^-4 M) || Cu2+(1.0 x 10^-6 M) | Cu","choices":["+0.98 V","+1.10 V","+1.04 V","+1.22 V","+1.16 V"],"correctIndex":2},{"type":"mcq","text":"Calculate the Cd2+ concentration in the following cell if Ecell = 0.23 V:\nCd(s) | Cd2+(x M) || Ni2+(1.00 M) | Ni","choices":["0.0019 M","1.4 x 10^-5 M","0.0036 M","0.015 M","0.0086 M"],"correctIndex":0},{"type":"mcq","text":"A concentration cell is constructed by placing identical iron electrodes in two Fe2+ solutions. The potential of this cell is observed to be 0.047 V. If the more concentrated Fe2+ solution is 0.10 M, what is the concentration of the other Fe2+ solution?","choices":["1.5 x 10^-2 M","2.8 x 10^-5 M","3.5 x 10^-4 M","9.2 x 10^-2 M","2.6 x 10^-3 M"],"correctIndex":4},{"type":"mcq","text":"Calculate Delta G0 for the following reaction from its E0 value (F = 96,500 J/V mol e-):\n3Hg2Cl2 + 2Cr -> 2Cr3+ + 6Hg + 6Cl-","choices":["-1.12 x 10^3 kJ","-585 kJ","-361 kJ","1.62 x 10^3 kJ","-1.78 x 10^3 kJ"],"correctIndex":1},{"type":"mcq","text":"Calculate Delta G for the reaction of the cell below under the stated conditions (F = 96,500 J/V mol e-):\nZn | Zn2+(1.0 x 10^-8 M) || Cu2+(1.0 x 10^-6 M) | Cu","choices":["-163 kJ","-192 kJ","201 kJ","-212 kJ","-268 kJ"],"correctIndex":3}];
+    const quiz = document.getElementById('quiz');
+    const scoreDiv = document.getElementById('score');
+    const submitBtn = document.getElementById('submitBtn');
+    const viewBtn = document.getElementById('viewAnswers');
+    const darkToggle = document.getElementById('darkToggle');
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    function renderKaTeX(element) {
+      if (window.renderMathInElement) {
+        window.renderMathInElement(element || document.body, {
+          delimiters: [
+            { left: '$$', right: '$$', display: true },
+            { left: '\\(', right: '\\)', display: false },
+            { left: '\\[', right: '\\]', display: true }
+          ],
+          throwOnError: false
+        });
+      }
+    }
+    function render(){
+      quiz.innerHTML='';
+      questions.forEach((q, idx)=>{
+        const el = document.createElement('div'); el.className='q'; el.dataset.idx=idx;
+        const title = document.createElement('div'); title.innerHTML = '<strong>Q' + (idx+1) + '.</strong> ' + escapeHtml(q.text);
+        el.appendChild(title);
+        if(q.type==='mcq'){
+          const list = document.createElement('div'); list.style.marginTop='8px';
+          q.choices.forEach((opt, i)=>{
+            const row = document.createElement('div');
+            row.innerHTML = '<label style="display:flex;gap:8px;align-items:center"><input type="radio" name="q' + idx + '" value="' + i + '"> <span>' + String.fromCharCode(65+i) + '. ' + escapeHtml(opt) + '</span></label>';
+            list.appendChild(row);
+          });
+          el.appendChild(list);
+        } else {
+          const ta = document.createElement('textarea'); ta.placeholder = 'Write your answer here.'; ta.dataset.frqid = idx; ta.style.marginTop='8px'; el.appendChild(ta);
+          const hint = document.createElement('div'); hint.className='muted'; hint.style.marginTop='6px'; hint.textContent = 'An example answer is available when viewing answers.'; el.appendChild(hint);
+        }
+        quiz.appendChild(el);
+      });
+      renderKaTeX(quiz);
+    }
+    function grade(showAnswers = false){
+      let correct=0, totalMCQ=0;
+      questions.forEach((q, idx)=>{
+        if(q.type!=='mcq') return;
+        totalMCQ++;
+        const sel = document.querySelector('input[name="q' + idx + '"]:checked');
+        const parent = document.querySelector('.q[data-idx="' + idx + '"]');
+        parent.classList.remove('correct','wrong');
+        if(showAnswers) {
+          const radios = parent.querySelectorAll('input[type=radio]');
+          radios.forEach((r,i)=>{
+            const label = r.parentElement.querySelector('span');
+            if(i === (q.correctIndex||0)) label.style.fontWeight='700';
+          });
+        }
+        if(sel){
+          const val = parseInt(sel.value,10);
+          if(val === (q.correctIndex||0)) { correct++; parent.classList.add('correct'); }
+          else parent.classList.add('wrong');
+        } else { parent.classList.add('wrong'); }
+      });
+      return {correct,totalMCQ};
+    }
+    submitBtn.onclick = ()=>{
+      const res = grade();
+      scoreDiv.textContent = 'Score: ' + res.correct + ' / ' + res.totalMCQ + ' (MCQs). FRQs are shown as examples and are not auto-graded.';
+      document.querySelectorAll('input[type=radio], textarea').forEach(el=>el.disabled=true);
+    };
+    viewBtn.onclick = () => {
+      questions.forEach((q, idx)=>{
+        const el = document.querySelector('.q[data-idx="' + idx + '"]');
+        if(q.type==='mcq'){
+          const radios = el.querySelectorAll('input[type=radio]');
+          radios.forEach((r,i)=>{
+            const label = r.parentElement.querySelector('span');
+            const text = label.textContent;
+            if(i === (q.correctIndex||0)) { label.innerHTML = '<span class="correct-answer">' + text + '</span>'; }
+          });
+        } else {
+          if(!el.querySelector('.example')) {
+            const ex = document.createElement('div'); ex.className = 'example';
+            ex.innerHTML = '<span class="correct-answer">Example answer:</span><div style="margin-top:6px">' + escapeHtml(q.example||'(no example)') + '</div>';
+            el.appendChild(ex);
+          }
+        }
+      });
+      const res = grade(true);
+      scoreDiv.textContent = 'Score: ' + res.correct + ' / ' + res.totalMCQ + ' (MCQs). FRQs are not graded here.';
+      renderKaTeX(quiz);
+    };
+    darkToggle.checked = document.body.classList.contains('dark');
+    darkToggle.onchange = ()=>{ document.body.classList.toggle('dark', darkToggle.checked); };
+    render();
+  </script>
+</body>
+</html>
