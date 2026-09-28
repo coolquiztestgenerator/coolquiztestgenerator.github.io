@@ -14,6 +14,12 @@
 
   <title>Quiz Generator</title>
   <style>
+    .correct { border-color: #22c55e !important; }
+.correct::after { content: "✓ Correct"; color: #15803d; font-weight: 600; display: block; margin-top: 8px; }
+.wrong { border-color: #ef4444 !important; }
+.wrong::after { content: "✗ Incorrect"; color: #b91c1c; font-weight: 600; display: block; margin-top: 8px; }
+.correct-answer { color: #15803d; font-weight: 600; }
+.example { margin-top: 12px; padding: 14px; background: rgba(0, 0, 0, 0.03); border-radius: 10px; font-style: italic; }
     :root {
       --bg: #f4f6fb;
       --card: #ffffffcc;
@@ -492,19 +498,141 @@ function loadInteractiveQuizFromHash() {
       if (jsonString) {
         const data = JSON.parse(jsonString);
         
-        // Hide generator UI elements
-        document.body.classList.add('quiz-mode');
-        
-        // Populate and build the interactive HTML inside the main section
-        const generatedHtml = buildQuizHTML(data.questions, data.options?.dark || false, {
-          title: data.title || 'Quiz',
-          shuffleQuestions: data.options?.shuffleQuestions,
-          shuffleChoices: data.options?.shuffleChoices,
-          includeFrqExamples: data.options?.includeFrqExamples
+        // 1. Hide the generator application wrapper
+        const appElement = document.getElementById('app');
+        if (appElement) appElement.style.display = 'none';
+
+        // 2. Build the quiz wrapper container dynamically
+        const quizContainer = document.createElement('div');
+        quizContainer.className = 'wrap';
+        quizContainer.innerHTML = `
+          <div class="top" style="margin-bottom:10px">
+            <h2 style="margin:0">${escapeHtml(data.title || 'Quiz')}</h2>
+            <div>
+              <label><input id="quizDarkToggle" type="checkbox" ${data.options?.dark ? 'checked' : ''}> Dark</label>
+              <button id="viewAnswers" class="secondary">View Answers</button>
+            </div>
+          </div>
+          <div id="quiz" class="card"></div>
+          <div style="margin-top:12px;display:flex;gap:8px">
+            <button id="submitBtn" class="accent">Submit</button>
+            <div id="score" class="muted"></div>
+          </div>
+        `;
+
+        document.body.appendChild(quizContainer);
+        if (data.options?.dark) document.body.classList.add('dark');
+
+        // 3. Render questions
+        const quizElement = document.getElementById('quiz');
+        const scoreDiv = document.getElementById('score');
+        const submitBtn = document.getElementById('submitBtn');
+        const viewBtn = document.getElementById('viewAnswers');
+        const quizDarkToggle = document.getElementById('quizDarkToggle');
+        const questions = data.questions || [];
+
+        // Apply shuffle options if requested
+        if (data.options?.shuffleQuestions) {
+          shuffleArray(questions);
+        }
+
+        questions.forEach((q, idx) => {
+          const el = document.createElement('div'); 
+          el.className = 'q'; 
+          el.dataset.idx = idx;
+          const titleEl = document.createElement('div'); 
+          titleEl.innerHTML = `<strong>Q${idx + 1}.</strong> ${escapeHtml(q.text)}`;
+          el.appendChild(titleEl);
+
+          if (q.type === 'mcq') {
+            const list = document.createElement('div'); 
+            list.style.marginTop = '8px';
+            
+            let choices = [...q.choices];
+            let correctIdx = q.correctIndex || 0;
+
+            if (data.options?.shuffleChoices) {
+              const indices = choices.map((_, i) => i);
+              shuffleArray(indices);
+              choices = indices.map(i => q.choices[i]);
+              correctIdx = indices.indexOf(correctIdx);
+            }
+            q._activeCorrect = correctIdx;
+
+            choices.forEach((opt, i) => {
+              const row = document.createElement('div');
+              row.innerHTML = `<label style="display:flex;gap:8px;align-items:center">
+                <input type="radio" name="q${idx}" value="${i}"> 
+                <span>${String.fromCharCode(65 + i)}. ${escapeHtml(opt)}</span>
+              </label>`;
+              list.appendChild(row);
+            });
+            el.appendChild(list);
+          } else {
+            const ta = document.createElement('textarea'); 
+            ta.placeholder = 'Write your answer here.'; 
+            ta.style.marginTop = '8px'; 
+            el.appendChild(ta);
+            
+            const hint = document.createElement('div'); 
+            hint.className = 'muted'; 
+            hint.style.marginTop = '6px'; 
+            hint.textContent = 'An example answer is available when viewing answers.'; 
+            el.appendChild(hint);
+          }
+          quizElement.appendChild(el);
         });
 
-        // Replace page content with the rendered quiz view
-        document.body.innerHTML = generatedHtml;
+        // 4. Attach quiz control listeners
+        submitBtn.onclick = () => {
+          let correct = 0, totalMCQ = 0;
+          questions.forEach((q, idx) => {
+            if (q.type !== 'mcq') return;
+            totalMCQ++;
+            const sel = document.querySelector(`input[name="q${idx}"]:checked`);
+            const parent = document.querySelector(`.q[data-idx="${idx}"]`);
+            parent.classList.remove('correct', 'wrong');
+            
+            const targetCorrect = q._activeCorrect !== undefined ? q._activeCorrect : (q.correctIndex || 0);
+            if (sel && parseInt(sel.value, 10) === targetCorrect) {
+              correct++;
+              parent.classList.add('correct');
+            } else {
+              parent.classList.add('wrong');
+            }
+          });
+          scoreDiv.textContent = `Score: ${correct} / ${totalMCQ} (MCQs). FRQs are not auto-graded.`;
+          document.querySelectorAll('input[type=radio], textarea').forEach(el => el.disabled = true);
+        };
+
+        viewBtn.onclick = () => {
+          questions.forEach((q, idx) => {
+            const el = document.querySelector(`.q[data-idx="${idx}"]`);
+            if (q.type === 'mcq') {
+              const radios = el.querySelectorAll('input[type=radio]');
+              const targetCorrect = q._activeCorrect !== undefined ? q._activeCorrect : (q.correctIndex || 0);
+              radios.forEach((r, i) => {
+                const label = r.parentElement.querySelector('span');
+                if (i === targetCorrect) {
+                  label.innerHTML = `<span class="correct-answer">${label.textContent}</span>`;
+                }
+              });
+            } else {
+              if (!el.querySelector('.example')) {
+                const ex = document.createElement('div'); 
+                ex.className = 'example';
+                ex.innerHTML = `<span class="correct-answer">Example answer:</span><div style="margin-top:6px">${escapeHtml(q.example || '(no example)')}</div>`;
+                el.appendChild(ex);
+              }
+            }
+          });
+          renderKaTeX(quizElement);
+        };
+
+        quizDarkToggle.onchange = () => document.body.classList.toggle('dark', quizDarkToggle.checked);
+
+        // Render formulas
+        renderKaTeX(quizElement);
       }
     } catch (err) {
       console.error('Failed to parse quiz link:', err);
