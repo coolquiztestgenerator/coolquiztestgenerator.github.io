@@ -497,7 +497,7 @@ body.quiz-mode div[style*="border-top"] {
 shareQuizLinkBtn.onclick = async () => {
   if (!state.questions.length) return alert('Add some questions first!');
 
-  // Pack title and question data
+  // 1. Pack title and options
   const quizData = {
     title: quizTitle.value || 'Quiz',
     questions: state.questions,
@@ -509,21 +509,41 @@ shareQuizLinkBtn.onclick = async () => {
     }
   };
 
-  // Compress data with LZ-String
+  // 2. Compress data
   const jsonString = JSON.stringify(quizData);
   const compressed = LZString.compressToEncodedURIComponent(jsonString);
+  const longUrl = `${window.location.origin}${window.location.pathname}#take=${compressed}`;
 
-  // Use #take= hash to differentiate taking a test from editing one
-  const shareableUrl = `${window.location.origin}${window.location.pathname}#take=${compressed}`;
+  // UI loading feedback
+  const originalText = shareQuizLinkBtn.textContent;
+  shareQuizLinkBtn.disabled = true;
+  shareQuizLinkBtn.textContent = '⏳ Shortening...';
 
   try {
-    await navigator.clipboard.writeText(shareableUrl);
-    const originalText = shareQuizLinkBtn.textContent;
-    shareQuizLinkBtn.textContent = '✓ Quiz Link Copied!';
-    setTimeout(() => shareQuizLinkBtn.textContent = originalText, 2000);
+    // 3. Request short link from TinyURL API
+    const response = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(longUrl)}`);
+    
+    if (!response.ok) throw new Error('Shortening service unavailable');
+    
+    const shortUrl = await response.text();
+
+    // 4. Copy short link to clipboard
+    await navigator.clipboard.writeText(shortUrl);
+    shareQuizLinkBtn.textContent = '✓ Short Link Copied!';
   } catch (err) {
-    console.error('Failed to copy link:', err);
-    prompt('Copy this shareable quiz link:', shareableUrl);
+    console.warn('API Shortener failed, falling back to long URL:', err);
+    // Fallback: Copy the long LZ-String URL if the shortener fails
+    try {
+      await navigator.clipboard.writeText(longUrl);
+      shareQuizLinkBtn.textContent = '✓ Link Copied!';
+    } catch (clipboardErr) {
+      prompt('Copy your link:', longUrl);
+    }
+  } finally {
+    setTimeout(() => {
+      shareQuizLinkBtn.disabled = false;
+      shareQuizLinkBtn.textContent = originalText;
+    }, 2500);
   }
 };
 
