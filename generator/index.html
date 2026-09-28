@@ -14,6 +14,46 @@
 
   <title>Quiz Generator</title>
   <style>
+    /* Styling for Link-Shared Quiz Mode */
+.wrap {
+  max-width: 850px;
+  margin: 0 auto;
+  padding: 28px 20px 60px;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+/* Fixes the missing main card container */
+.quiz-card-container {
+  background: var(--card);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  transition: var(--transition);
+}
+
+/* Individual question box formatting */
+.q {
+  margin-bottom: 20px;
+  padding: 18px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(0,0,0,0.02), transparent);
+  transition: var(--transition);
+}
+
+.q:hover {
+  border-color: var(--accent);
+}
     .correct { border-color: #22c55e !important; }
 .correct::after { content: "✓ Correct"; color: #15803d; font-weight: 600; display: block; margin-top: 8px; }
 .wrong { border-color: #ef4444 !important; }
@@ -498,23 +538,24 @@ function loadInteractiveQuizFromHash() {
       if (jsonString) {
         const data = JSON.parse(jsonString);
         
-        // 1. Hide the generator application wrapper
+        // 1. Hide the editor app
         const appElement = document.getElementById('app');
         if (appElement) appElement.style.display = 'none';
 
-        // 2. Build the quiz wrapper container dynamically
+        // 2. Build the main layout
         const quizContainer = document.createElement('div');
         quizContainer.className = 'wrap';
         quizContainer.innerHTML = `
-          <div class="top" style="margin-bottom:10px">
+          <div class="top">
             <h2 style="margin:0">${escapeHtml(data.title || 'Quiz')}</h2>
-            <div>
+            <div style="display:flex; gap:12px; align-items:center;">
               <label><input id="quizDarkToggle" type="checkbox" ${data.options?.dark ? 'checked' : ''}> Dark</label>
               <button id="viewAnswers" class="secondary">View Answers</button>
             </div>
           </div>
-          <div id="quiz" class="card"></div>
-          <div style="margin-top:12px;display:flex;gap:8px">
+          <!-- Question container with card styling -->
+          <div id="quiz" class="quiz-card-container"></div>
+          <div style="margin-top:12px; display:flex; gap:8px; align-items:center;">
             <button id="submitBtn" class="accent">Submit</button>
             <div id="score" class="muted"></div>
           </div>
@@ -523,7 +564,7 @@ function loadInteractiveQuizFromHash() {
         document.body.appendChild(quizContainer);
         if (data.options?.dark) document.body.classList.add('dark');
 
-        // 3. Render questions
+        // 3. Render questions inside the card
         const quizElement = document.getElementById('quiz');
         const scoreDiv = document.getElementById('score');
         const submitBtn = document.getElementById('submitBtn');
@@ -531,7 +572,6 @@ function loadInteractiveQuizFromHash() {
         const quizDarkToggle = document.getElementById('quizDarkToggle');
         const questions = data.questions || [];
 
-        // Apply shuffle options if requested
         if (data.options?.shuffleQuestions) {
           shuffleArray(questions);
         }
@@ -540,6 +580,7 @@ function loadInteractiveQuizFromHash() {
           const el = document.createElement('div'); 
           el.className = 'q'; 
           el.dataset.idx = idx;
+          
           const titleEl = document.createElement('div'); 
           titleEl.innerHTML = `<strong>Q${idx + 1}.</strong> ${escapeHtml(q.text)}`;
           el.appendChild(titleEl);
@@ -561,7 +602,7 @@ function loadInteractiveQuizFromHash() {
 
             choices.forEach((opt, i) => {
               const row = document.createElement('div');
-              row.innerHTML = `<label style="display:flex;gap:8px;align-items:center">
+              row.innerHTML = `<label style="display:flex;gap:8px;align-items:center;margin-top:6px;">
                 <input type="radio" name="q${idx}" value="${i}"> 
                 <span>${String.fromCharCode(65 + i)}. ${escapeHtml(opt)}</span>
               </label>`;
@@ -583,7 +624,7 @@ function loadInteractiveQuizFromHash() {
           quizElement.appendChild(el);
         });
 
-        // 4. Attach quiz control listeners
+        // 4. Attach quiz listeners
         submitBtn.onclick = () => {
           let correct = 0, totalMCQ = 0;
           questions.forEach((q, idx) => {
@@ -631,7 +672,7 @@ function loadInteractiveQuizFromHash() {
 
         quizDarkToggle.onchange = () => document.body.classList.toggle('dark', quizDarkToggle.checked);
 
-        // Render formulas
+        // Render math equations
         renderKaTeX(quizElement);
       }
     } catch (err) {
