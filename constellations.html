@@ -1,0 +1,2528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>CONSTELLATIONS — Planar Geometric Strategy</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-page: #0a0a0a;
+      --bg-surface: #111111;
+      --bg-elevated: #181818;
+      --border-hairline: #242424;
+      --border-strong: #404040;
+      --text-primary: #f5f5f5;
+      --text-secondary: #8a8a8a;
+      --text-muted: #555555;
+      --p1-hex: #f5f5f5;
+      --p2-hex: #d97706;
+    }
+
+    html.light {
+      --bg-page: #f7f7f5;
+      --bg-surface: #ffffff;
+      --bg-elevated: #efefec;
+      --border-hairline: #e2e2de;
+      --border-strong: #b8b8b2;
+      --text-primary: #111111;
+      --text-secondary: #666662;
+      --text-muted: #999994;
+      --p1-hex: #111111;
+      --p2-hex: #c2410c;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-page);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow-x: hidden;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .font-mono-tech {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .surface-panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-hairline);
+    }
+
+    .surface-elevated {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-hairline);
+    }
+
+    .text-main { color: var(--text-primary); }
+    .text-sub { color: var(--text-secondary); }
+    .text-dim { color: var(--text-muted); }
+
+    .p1-text { color: var(--p1-hex); }
+    .p2-text { color: var(--p2-hex); }
+    .p1-dot { background-color: var(--p1-hex); }
+    .p2-dot { background-color: var(--p2-hex); }
+
+    .btn-flat {
+      transition: background-color 0.1s ease, border-color 0.1s ease;
+      border: 1px solid var(--border-hairline);
+      background: var(--bg-surface);
+      color: var(--text-primary);
+    }
+
+    .btn-flat:hover:not(:disabled) {
+      border-color: var(--border-strong);
+      background: var(--bg-elevated);
+    }
+
+    .btn-flat:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .btn-solid {
+      background: var(--text-primary);
+      border: 1px solid var(--text-primary);
+      color: var(--bg-page);
+      font-weight: 500;
+    }
+
+    .btn-solid:hover:not(:disabled) {
+      opacity: 0.88;
+    }
+
+    .btn-accent {
+      background: var(--bg-elevated);
+      border: 1px solid var(--p2-hex);
+      color: var(--p2-hex);
+    }
+
+    .turn-active-p1 {
+      border-color: var(--p1-hex) !important;
+    }
+
+    .turn-active-p2 {
+      border-color: var(--p2-hex) !important;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: var(--border-hairline);
+      height: 2px;
+      border-radius: 0;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--text-primary);
+      cursor: pointer;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      cursor: crosshair;
+    }
+
+    .modal-backdrop {
+      background: rgba(0, 0, 0, 0.65);
+    }
+    html.light .modal-backdrop {
+      background: rgba(247, 247, 245, 0.82);
+    }
+  </style>
+</head>
+<body class="select-none">
+
+  <!-- Minimal Top Bar -->
+  <header class="w-full max-w-4xl mx-auto px-4 pt-4 pb-3 flex flex-col gap-3 z-10">
+    <div class="flex items-center justify-between gap-2">
+      <div class="flex items-center gap-3">
+        <span class="font-mono-tech text-xs font-semibold tracking-[0.2em] uppercase text-main">
+          CONSTELLATIONS
+        </span>
+        <span id="headerEloBadge" class="font-mono-tech text-[11px] text-sub">
+          1200 · Silver
+        </span>
+      </div>
+
+      <!-- Minimal Utility Controls -->
+      <div class="flex items-center gap-1.5">
+        <button id="btnTheme" title="Toggle Light/Dark Theme" class="btn-flat px-2.5 py-1 rounded text-[11px] font-mono-tech text-sub hover:text-main">
+          Light
+        </button>
+
+        <button id="btnSound" title="Toggle Sound" class="btn-flat px-2.5 py-1 rounded text-[11px] font-mono-tech text-sub hover:text-main">
+          Audio: On
+        </button>
+
+        <button id="btnRules" class="btn-flat px-2.5 py-1 rounded text-[11px] font-mono-tech text-sub hover:text-main">
+          Rules
+        </button>
+
+        <button id="btnSetup" class="btn-flat px-2.5 py-1 rounded text-[11px] font-mono-tech text-main">
+          Mode
+        </button>
+      </div>
+    </div>
+
+    <!-- Ultra-Minimal Score Strip -->
+    <div class="grid grid-cols-12 gap-2 items-center">
+      <div id="cardP1" class="col-span-5 surface-panel rounded px-3 py-2 flex items-center justify-between turn-active-p1">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="w-1.5 h-1.5 rounded-full p1-dot shrink-0"></span>
+          <div class="truncate">
+            <div id="labelP1" class="text-[11px] font-medium p1-text truncate">PLAYER 1</div>
+            <div id="subP1" class="text-[10px] font-mono-tech text-dim truncate">P1</div>
+          </div>
+        </div>
+        <div id="scoreP1" class="font-mono-tech text-lg font-semibold text-main pl-2">0</div>
+      </div>
+
+      <div class="col-span-2 flex flex-col items-center justify-center text-center">
+        <div id="turnBadge" class="font-mono-tech text-[10px] uppercase tracking-widest px-2 py-0.5 rounded surface-panel p1-text">
+          P1
+        </div>
+        <div class="font-mono-tech text-[10px] text-dim mt-0.5">
+          <span id="validMovesCount">--</span>
+        </div>
+      </div>
+
+      <div id="cardP2" class="col-span-5 surface-panel rounded px-3 py-2 flex items-center justify-between">
+        <div id="scoreP2" class="font-mono-tech text-lg font-semibold text-main pr-2">0</div>
+        <div class="flex items-center gap-2 min-w-0 text-right">
+          <div class="truncate">
+            <div id="labelP2" class="text-[11px] font-medium p2-text truncate">PLAYER 2</div>
+            <div id="subP2" class="text-[10px] font-mono-tech text-dim truncate">P2</div>
+          </div>
+          <span class="w-1.5 h-1.5 rounded-full p2-dot shrink-0"></span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Canvas Area -->
+  <main class="relative flex-1 w-full max-w-4xl mx-auto px-4 flex flex-col items-center justify-center min-h-[340px]">
+    <div id="canvasContainer" class="relative w-full h-full flex-1 min-h-[360px] max-h-[68dvh] rounded surface-panel overflow-hidden">
+      <canvas id="gameCanvas"></canvas>
+
+      <!-- Minimal Top-Left Meta -->
+      <div class="absolute top-3 left-3 pointer-events-none flex items-center gap-1.5 text-[10px] text-dim font-mono-tech">
+        <span id="hudPresetName" class="text-sub">Hexa-Ring</span>
+        <span>/</span>
+        <span id="hudNodeCount">19n</span>
+        <span id="hudSeedTag" class="hidden"></span>
+        <span id="hudRankedBadge" class="hidden p2-text">/ RANKED</span>
+      </div>
+
+      <!-- Minimal Bonus Indicator -->
+      <div id="bonusBanner" class="hidden absolute top-3 right-3 pointer-events-none px-2 py-0.5 rounded surface-elevated text-main text-[10px] font-mono-tech">
+        +1 · BONUS
+      </div>
+
+      <!-- Pie Rule Bar -->
+      <div id="pieRuleBar" class="hidden absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 px-3 py-1.5 rounded surface-panel">
+        <span class="text-[11px] font-mono-tech text-sub">Pie Rule:</span>
+        <button id="btnPieSwap" class="btn-flat btn-accent px-2 py-0.5 rounded text-[11px] font-mono-tech whitespace-nowrap">
+          Swap Sides
+        </button>
+      </div>
+
+      <!-- Minimal Toast -->
+      <div id="toastPill" class="hidden absolute bottom-3 left-1/2 -translate-x-1/2 z-20 px-3 py-1 rounded surface-elevated text-[11px] font-mono-tech text-main pointer-events-none whitespace-nowrap">
+      </div>
+    </div>
+  </main>
+
+  <!-- Minimal Bottom Controls -->
+  <footer class="w-full max-w-4xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-2 z-10">
+    <div class="flex items-center gap-1.5">
+      <button id="btnUndo" class="btn-flat px-3 py-1.5 rounded text-[11px] font-mono-tech text-sub hover:text-main">
+        Undo
+      </button>
+
+      <button id="btnHint" class="btn-flat px-3 py-1.5 rounded text-[11px] font-mono-tech text-sub hover:text-main">
+        Hint
+      </button>
+
+      <div id="onlineRoomPill" class="hidden items-center gap-2 px-2.5 py-1.5 rounded surface-panel text-[11px] font-mono-tech">
+        <span id="onlinePresenceDot" class="w-1.5 h-1.5 rounded-full p2-dot"></span>
+        <span id="hudRoomCode" class="text-main tracking-wider">----</span>
+        <button id="btnCopyRoomCode" class="text-[10px] text-sub hover:text-main underline">
+          Copy
+        </button>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-1.5">
+      <button id="btnLeaveRoom" class="hidden btn-flat px-3 py-1.5 rounded text-[11px] font-mono-tech p2-text">
+        Leave
+      </button>
+      <button id="btnNewGame" class="btn-solid px-3.5 py-1.5 rounded text-[11px] font-mono-tech">
+        <span id="btnNewGameLabel">Reset</span>
+      </button>
+    </div>
+  </footer>
+
+  <!-- MODAL 1: Rules -->
+  <div id="modalRules" class="hidden fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4">
+    <div class="surface-panel max-w-sm w-full rounded p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-mono-tech text-xs font-semibold uppercase tracking-widest text-main">Rules</h2>
+        <button id="closeRules" class="text-sub hover:text-main text-xs font-mono-tech">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs text-sub leading-relaxed">
+        <div>
+          <span class="font-medium text-main">1. Non-Crossing Lines:</span> Connect any two open dots. Lines cannot cross existing lines.
+        </div>
+        <div>
+          <span class="font-medium text-main">2. Empty Triangles:</span> Close an empty triangle (no dots inside) to score <span class="text-main">+1</span> and take an immediate bonus turn. Enclosed dots lock permanently.
+        </div>
+        <div>
+          <span class="font-medium text-main">3. Pie Rule:</span> On Turn 2, Player 2 may swap sides to claim Player 1's opening line.
+        </div>
+      </div>
+
+      <button id="btnRulesGotIt" class="mt-5 w-full btn-solid py-2 rounded text-xs font-mono-tech">
+        Close
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL 2: Mode & Ranked Matchmaking -->
+  <div id="modalSetup" class="hidden fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4 overflow-y-auto">
+    <div class="surface-panel max-w-sm w-full rounded p-5 my-auto">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-mono-tech text-xs font-semibold uppercase tracking-widest text-main">Mode &amp; Ranked</h2>
+        <button id="closeSetup" class="text-sub hover:text-main text-xs font-mono-tech">✕</button>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block font-mono-tech text-[10px] uppercase tracking-wider text-dim mb-1.5">Mode</label>
+          <div class="grid grid-cols-5 gap-1" id="modeSelector">
+            <button data-mode="ranked" class="mode-btn btn-flat py-1.5 px-1 rounded text-[11px] font-mono-tech text-center">Ranked</button>
+            <button data-mode="online" class="mode-btn btn-flat py-1.5 px-1 rounded text-[11px] font-mono-tech text-center">Room</button>
+            <button data-mode="pvp" class="mode-btn btn-flat py-1.5 px-1 rounded text-[11px] font-mono-tech text-center">1v1</button>
+            <button data-mode="ai-easy" class="mode-btn btn-flat py-1.5 px-1 rounded text-[11px] font-mono-tech text-center">Easy</button>
+            <button data-mode="ai-tactical" class="mode-btn btn-flat py-1.5 px-1 rounded text-[11px] font-mono-tech text-center">Hard</button>
+          </div>
+        </div>
+
+        <!-- Ranked Panel -->
+        <div id="rankedSetupSection" class="hidden p-3 rounded surface-elevated space-y-2.5">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-xs font-medium text-main">Ranked Matchmaking</div>
+              <div class="text-[10px] font-mono-tech text-dim">Closest Elo · Hints off</div>
+            </div>
+            <div class="text-right font-mono-tech">
+              <div id="rankedModalElo" class="text-xs font-semibold text-main">1200</div>
+              <div id="rankedModalRecord" class="text-[10px] text-dim">0W-0L-0D</div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-4 gap-1 text-center text-[10px] font-mono-tech pt-2 border-t border-[var(--border-hairline)] text-sub">
+            <div>Bronze<br>&lt;1150</div>
+            <div>Silver<br>1150+</div>
+            <div>Gold<br>1350+</div>
+            <div>Apex<br>1600+</div>
+          </div>
+
+          <div id="rankedQueueStatus" class="hidden flex items-center justify-between pt-2 border-t border-[var(--border-hairline)] text-[11px] font-mono-tech">
+            <span id="rankedQueueText" class="text-main">Searching...</span>
+            <button id="btnCancelQueue" class="p2-text underline">Cancel</button>
+          </div>
+        </div>
+
+        <!-- Private Room Panel -->
+        <div id="onlineSetupSection" class="hidden p-3 rounded surface-elevated space-y-2.5">
+          <div class="flex items-center justify-between text-[11px] font-mono-tech">
+            <span class="text-main">Private Room</span>
+            <span id="onlineAuthStatus" class="text-dim">Connecting...</span>
+          </div>
+
+          <div class="flex gap-1.5">
+            <input id="inputJoinCode" type="text" maxlength="6" placeholder="CODE" class="flex-1 surface-panel rounded px-2.5 py-1 text-xs font-mono-tech uppercase tracking-widest text-main focus:outline-none" />
+            <button id="btnJoinRoom" class="btn-flat px-3 py-1 rounded text-xs font-mono-tech text-main">
+              Join
+            </button>
+          </div>
+
+          <div class="text-[10px] font-mono-tech text-dim flex items-center justify-between pt-1.5 border-t border-[var(--border-hairline)]">
+            <span>ID</span>
+            <span id="displayUserId" class="truncate max-w-[200px]">--</span>
+          </div>
+        </div>
+
+        <!-- Board Layout -->
+        <div id="arenaConfigWrapper" class="space-y-3.5">
+          <div>
+            <label class="block font-mono-tech text-[10px] uppercase tracking-wider text-dim mb-1.5">Layout</label>
+            <div class="grid grid-cols-3 gap-1.5" id="presetSelector">
+              <button data-preset="hexaring" class="preset-btn btn-flat py-1.5 px-2 rounded text-[11px] font-mono-tech text-center">Hexa</button>
+              <button data-preset="starburst" class="preset-btn btn-flat py-1.5 px-2 rounded text-[11px] font-mono-tech text-center">Star</button>
+              <button data-preset="random" class="preset-btn btn-flat py-1.5 px-2 rounded text-[11px] font-mono-tech text-center">Seed</button>
+            </div>
+          </div>
+
+          <div id="seedControlRow" class="hidden">
+            <label class="block font-mono-tech text-[10px] uppercase tracking-wider text-dim mb-1">Seed</label>
+            <div class="flex gap-1.5">
+              <input id="inputSeed" type="text" maxlength="16" placeholder="ORION-7" class="flex-1 surface-elevated rounded px-2.5 py-1 text-xs font-mono-tech text-main focus:outline-none" />
+              <button id="btnRollSeed" class="btn-flat px-2.5 py-1 rounded text-[11px] font-mono-tech text-sub">Roll</button>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between items-center mb-1.5">
+              <label class="font-mono-tech text-[10px] uppercase tracking-wider text-dim">Nodes</label>
+              <span id="sliderNodeVal" class="font-mono-tech text-[11px] text-main">19</span>
+            </div>
+            <input id="sliderNodes" type="range" min="12" max="28" value="19" class="w-full" />
+          </div>
+        </div>
+      </div>
+
+      <button id="btnApplySetup" class="mt-5 w-full btn-solid py-2 rounded text-xs font-mono-tech">
+        Start
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL 3: Victory Summary -->
+  <div id="modalVictory" class="hidden fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4">
+    <div class="surface-panel max-w-xs w-full rounded p-5 text-center">
+      <div id="victoryBadge" class="font-mono-tech text-[10px] uppercase tracking-widest text-dim mb-1">
+        Complete
+      </div>
+      <h2 id="victoryTitle" class="font-mono-tech text-base font-semibold text-main mb-1">PLAYER 1 WINS</h2>
+      <p id="victorySubtitle" class="text-[11px] text-sub mb-4">No moves remain.</p>
+
+      <div id="victoryEloBox" class="hidden mb-4 py-1.5 px-3 rounded surface-elevated font-mono-tech text-xs">
+        <span class="text-sub">Elo:</span>
+        <span id="victoryEloNew" class="font-semibold text-main ml-1">1216</span>
+        <span id="victoryEloDelta" class="ml-1 text-main">(+16)</span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 mb-4">
+        <div class="surface-elevated rounded p-2.5">
+          <div id="endNameP1" class="text-[10px] font-mono-tech p1-text truncate">PLAYER 1</div>
+          <div id="endScoreP1" class="font-mono-tech text-xl font-semibold text-main mt-0.5">0</div>
+        </div>
+        <div class="surface-elevated rounded p-2.5">
+          <div id="endNameP2" class="text-[10px] font-mono-tech p2-text truncate">PLAYER 2</div>
+          <div id="endScoreP2" class="font-mono-tech text-xl font-semibold text-main mt-0.5">0</div>
+        </div>
+      </div>
+
+      <div class="flex gap-2">
+        <button id="btnCloseVictory" class="flex-1 btn-flat py-2 rounded text-xs font-mono-tech text-sub">
+          Board
+        </button>
+        <button id="btnPlayAgain" class="flex-1 btn-solid py-2 rounded text-xs font-mono-tech">
+          Again
+        </button>
+      </div>
+      <div id="rematchVoteStatus" class="hidden mt-2 text-[10px] font-mono-tech text-sub">
+        Waiting...
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // =========================================================================
+    // 0. THEME ENGINE (Ultra-Minimal Light & Dark Monochrome + Terracotta)
+    // =========================================================================
+    let isLightTheme = false;
+
+    function getPalette() {
+      if (isLightTheme) {
+        return {
+          p1Stroke: '#111111',
+          p1Fill: 'rgba(17, 17, 17, 0.11)',
+          p1Aim: 'rgba(17, 17, 17, 0.65)',
+          p2Stroke: '#c2410c',
+          p2Fill: 'rgba(194, 65, 12, 0.13)',
+          p2Aim: 'rgba(194, 65, 12, 0.65)',
+          nodeFill: '#111111',
+          nodeStroke: '#ffffff',
+          nodeHoverRing: '#111111',
+          nodeAnchoredFill: '#e2e2de',
+          nodeAnchoredStroke: '#999994',
+          guideNormal: 'rgba(17, 17, 17, 0.10)',
+          guideScore: 'rgba(194, 65, 12, 0.35)',
+          hintStroke: '#111111',
+          invalidStroke: '#dc2626'
+        };
+      }
+      return {
+        p1Stroke: '#f5f5f5',
+        p1Fill: 'rgba(245, 245, 245, 0.11)',
+        p1Aim: 'rgba(245, 245, 245, 0.65)',
+        p2Stroke: '#d97706',
+        p2Fill: 'rgba(217, 119, 6, 0.15)',
+        p2Aim: 'rgba(217, 119, 6, 0.65)',
+        nodeFill: '#f5f5f5',
+        nodeStroke: '#111111',
+        nodeHoverRing: '#f5f5f5',
+        nodeAnchoredFill: '#242424',
+        nodeAnchoredStroke: '#555555',
+        guideNormal: 'rgba(245, 245, 245, 0.08)',
+        guideScore: 'rgba(217, 119, 6, 0.35)',
+        hintStroke: '#f5f5f5',
+        invalidStroke: '#ef4444'
+      };
+    }
+
+    function toggleTheme() {
+      isLightTheme = !isLightTheme;
+      document.documentElement.classList.toggle('light', isLightTheme);
+      document.getElementById('btnTheme').textContent = isLightTheme ? 'Dark' : 'Light';
+    }
+
+    // =========================================================================
+    // 1. FIREBASE INITIALIZATION, AUTH & ELO PROFILE
+    // =========================================================================
+    // 0. FIREBASE INITIALIZATION, AUTH & ELO PROFILE
+    // =========================================================================
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'vertex-weave-app';
+    const firebaseConfig = typeof __firebase_config !== 'undefined'
+      ? JSON.parse(__firebase_config)
+      : {
+          apiKey: "AIzaSyA_3encAGiBAfI09HqSNtJrHnQAxbPfNPA",
+          authDomain: "vertex-weave.firebaseapp.com",
+          projectId: "vertex-weave",
+          storageBucket: "vertex-weave.firebasestorage.app",
+          messagingSenderId: "595966290028",
+          appId: "1:595966290028:web:a7eeb849428be96ac35049",
+          measurementId: "G-X6SFLRX8GV"
+        };
+
+    let app = null;
+    let db = null;
+    let auth = null;
+    let currentUser = null;
+    let roomUnsubscribe = null;
+    let queueUnsubscribe = null;
+    let queueExpandTimer = null;
+
+    const playerProfile = {
+      elo: 1200,
+      wins: 0,
+      losses: 0,
+      draws: 0
+    };
+
+    function getRankTier(elo) {
+      if (elo >= 1600) return 'Apex';
+      if (elo >= 1350) return 'Gold';
+      if (elo >= 1150) return 'Silver';
+      return 'Bronze';
+    }
+
+    function calculateEloDelta(myElo, oppElo, resultScore) {
+      // Standard K=32 Elo formula (resultScore: 1 = win, 0.5 = draw, 0 = loss)
+      const K = 32;
+      const expected = 1 / (1 + Math.pow(10, (oppElo - myElo) / 400));
+      return Math.round(K * (resultScore - expected));
+    }
+
+    async function loadOrCreatePlayerProfile(uid) {
+      if (!db || !uid) return;
+      try {
+        const ref = doc(db, 'artifacts', appId, 'public', 'data', 'vertex_profiles', uid);
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          const d = snap.data();
+          playerProfile.elo = d.elo ?? 1200;
+          playerProfile.wins = d.wins ?? 0;
+          playerProfile.losses = d.losses ?? 0;
+          playerProfile.draws = d.draws ?? 0;
+        } else {
+          await setDoc(ref, {
+            uid,
+            elo: 1200,
+            wins: 0,
+            losses: 0,
+            draws: 0,
+            updatedAt: Date.now()
+          });
+        }
+        updateEloUI();
+      } catch (err) {
+        console.error('Profile load error:', err);
+      }
+    }
+
+    function updateEloUI() {
+      const tier = getRankTier(playerProfile.elo);
+      document.getElementById('headerEloBadge').textContent = `${playerProfile.elo} · ${tier}`;
+      document.getElementById('rankedModalElo').textContent = `${playerProfile.elo} (${tier})`;
+      document.getElementById('rankedModalRecord').textContent = `${playerProfile.wins}W-${playerProfile.losses}L-${playerProfile.draws}D`;
+    }
+
+    async function initFirebase() {
+      if (!firebaseConfig) {
+        document.getElementById('onlineAuthStatus').textContent = 'Offline';
+        return;
+      }
+      try {
+        app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+
+        onAuthStateChanged(auth, async (user) => {
+          currentUser = user;
+          if (user) {
+            document.getElementById('onlineAuthStatus').textContent = 'Ready';
+            document.getElementById('displayUserId').textContent = user.uid;
+            await loadOrCreatePlayerProfile(user.uid);
+          }
+        });
+      } catch (err) {
+        console.error('Firebase init error:', err);
+        document.getElementById('onlineAuthStatus').textContent = 'Error';
+      }
+    }
+
+    initFirebase();
+
+    // =========================================================================
+    // 1. SUBTLE SYNTHESIZED SOUND ENGINE (Tone.js — softer, softer-attack clicks)
+    // =========================================================================
+    const SoundFX = {
+      enabled: true,
+      initialized: false,
+      synth: null,
+      triSynth: null,
+
+      async init() {
+        if (this.initialized) return;
+        try {
+          await Tone.start();
+          this.synth = new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: 'sine' },
+            envelope: { attack: 0.015, decay: 0.09, sustain: 0.0, release: 0.14 }
+          }).toDestination();
+          this.synth.volume.value = -22;
+
+          this.triSynth = new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: 'sine' },
+            envelope: { attack: 0.025, decay: 0.18, sustain: 0.02, release: 0.3 }
+          }).toDestination();
+          this.triSynth.volume.value = -19;
+          this.initialized = true;
+        } catch (e) {
+          // Graceful fallback if audio blocked
+        }
+      },
+
+      playSelect() {
+        if (!this.enabled) return;
+        this.init().then(() => {
+          if (this.synth) this.synth.triggerAttackRelease('E5', '64n');
+        });
+      },
+
+      playEdge(player) {
+        if (!this.enabled) return;
+        this.init().then(() => {
+          if (!this.synth) return;
+          const note = player === 1 ? 'A4' : 'B4';
+          this.synth.triggerAttackRelease(note, '32n');
+        });
+      },
+
+      playTriangle(count = 1) {
+        if (!this.enabled) return;
+        this.init().then(() => {
+          if (!this.triSynth) return;
+          const now = Tone.now();
+          this.triSynth.triggerAttackRelease('C5', '32n', now);
+          this.triSynth.triggerAttackRelease(count > 1 ? 'G5' : 'E5', '16n', now + 0.05);
+        });
+      },
+
+      playInvalid() {
+        if (!this.enabled) return;
+        this.init().then(() => {
+          if (this.synth) this.synth.triggerAttackRelease('D3', '64n');
+        });
+      },
+
+      playSwap() {
+        if (!this.enabled) return;
+        this.init().then(() => {
+          if (!this.triSynth) return;
+          const now = Tone.now();
+          this.triSynth.triggerAttackRelease('G4', '32n', now);
+          this.triSynth.triggerAttackRelease('D5', '16n', now + 0.06);
+        });
+      },
+
+      playWin() {
+        if (!this.enabled) return;
+        this.init().then(() => {
+          if (!this.triSynth) return;
+          const now = Tone.now();
+          ['C5', 'E5', 'G5'].forEach((n, idx) => {
+            this.triSynth.triggerAttackRelease(n, '16n', now + idx * 0.08);
+          });
+        });
+      }
+    };
+
+    // =========================================================================
+    // 2. DETERMINISTIC PRNG & GEOMETRY KERNEL
+    // =========================================================================
+    function hashString(str) {
+      let h = 2166136261 >>> 0;
+      for (let i = 0; i < str.length; i++) {
+        h ^= str.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+      }
+      return h >>> 0;
+    }
+
+    function mulberry32(seed) {
+      let a = seed >>> 0;
+      return function () {
+        a |= 0;
+        a = (a + 0x6D2B79F5) | 0;
+        let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    const EPS = 1e-7;
+
+    function orientation(p, q, r) {
+      const val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
+      if (Math.abs(val) < EPS) return 0; // collinear
+      return val > 0 ? 1 : 2; // 1 = clockwise, 2 = counterclockwise
+    }
+
+    function onSegment(p, q, r) {
+      return (
+        q.x <= Math.max(p.x, r.x) + EPS &&
+        q.x >= Math.min(p.x, r.x) - EPS &&
+        q.y <= Math.max(p.y, r.y) + EPS &&
+        q.y >= Math.min(p.y, r.y) - EPS
+      );
+    }
+
+    /**
+     * Checks if segment (a1, a2) intersects segment (b1, b2).
+     * Touching strictly at a shared endpoint is valid and returns false.
+     */
+    function segmentsCross(a1, a2, b1, b2, idxA1, idxA2, idxB1, idxB2) {
+      const sharesEndpoint =
+        idxA1 === idxB1 || idxA1 === idxB2 || idxA2 === idxB1 || idxA2 === idxB2;
+
+      if (sharesEndpoint) {
+        // Only illegal if one segment lies directly on top of the other (collinear overlap)
+        const o1 = orientation(a1, a2, b1);
+        const o2 = orientation(a1, a2, b2);
+        if (o1 === 0 && o2 === 0) {
+          // Check if the non-shared endpoint lies inside the other segment
+          if (idxA1 === idxB1 && (onSegment(a1, b2, a2) || onSegment(b1, a2, b2))) return true;
+          if (idxA1 === idxB2 && (onSegment(a1, b1, a2) || onSegment(b2, a2, b1))) return true;
+          if (idxA2 === idxB1 && (onSegment(a2, b2, a1) || onSegment(b1, a1, b2))) return true;
+          if (idxA2 === idxB2 && (onSegment(a2, b1, a1) || onSegment(b2, a1, b1))) return true;
+        }
+        return false;
+      }
+
+      const o1 = orientation(a1, a2, b1);
+      const o2 = orientation(a1, a2, b2);
+      const o3 = orientation(b1, b2, a1);
+      const o4 = orientation(b1, b2, a2);
+
+      if (o1 !== o2 && o3 !== o4) return true;
+      if (o1 === 0 && onSegment(a1, b1, a2)) return true;
+      if (o2 === 0 && onSegment(a1, b2, a2)) return true;
+      if (o3 === 0 && onSegment(b1, a1, b2)) return true;
+      if (o4 === 0 && onSegment(b1, a2, b2)) return true;
+
+      return false;
+    }
+
+    /**
+     * Checks if point p lies strictly inside or on the boundary of triangle (a, b, c)
+     */
+    function pointInTriangle(p, a, b, c) {
+      const areaOrig = Math.abs((b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y));
+      if (areaOrig < EPS) return true; // Degenerate collinear triangle is invalid anyway
+      const area1 = Math.abs((a.x - p.x) * (b.y - p.y) - (b.x - p.x) * (a.y - p.y));
+      const area2 = Math.abs((b.x - p.x) * (c.y - p.y) - (c.x - p.x) * (b.y - p.y));
+      const area3 = Math.abs((c.x - p.x) * (a.y - p.y) - (a.x - p.x) * (c.y - p.y));
+      return Math.abs(area1 + area2 + area3 - areaOrig) < 1e-5;
+    }
+
+    /**
+     * Checks if any node lies strictly on the open segment between i and j.
+     * Prevents drawing a single long edge right through an intermediate dot!
+     */
+    function segmentPassesThroughNode(nodes, i, j) {
+      const a = nodes[i];
+      const b = nodes[j];
+      for (let k = 0; k < nodes.length; k++) {
+        if (k === i || k === j) continue;
+        const p = nodes[k];
+        if (orientation(a, b, p) === 0 && onSegment(a, p, b)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    // =========================================================================
+    // 3. CONSTELLATION GENERATORS (Symmetric & Seeded)
+    // =========================================================================
+    function generateConstellation(preset, count, seedStr) {
+      const nodes = [];
+      const cx = 0.5;
+      const cy = 0.5;
+
+      if (preset === 'hexaring') {
+        // Center node + concentric symmetric rings with slight organic phase twist
+        nodes.push({ id: 0, x: cx, y: cy, anchored: false });
+        let remaining = count - 1;
+        const innerCount = Math.min(6, Math.floor(remaining * 0.4));
+        const outerCount = remaining - innerCount;
+
+        for (let i = 0; i < innerCount; i++) {
+          const angle = (i / innerCount) * Math.PI * 2 - Math.PI / 2;
+          nodes.push({
+            id: nodes.length,
+            x: cx + Math.cos(angle) * 0.21,
+            y: cy + Math.sin(angle) * 0.21,
+            anchored: false
+          });
+        }
+        for (let i = 0; i < outerCount; i++) {
+          const angle = (i / outerCount) * Math.PI * 2 - Math.PI / 2 + Math.PI / outerCount;
+          nodes.push({
+            id: nodes.length,
+            x: cx + Math.cos(angle) * 0.41,
+            y: cy + Math.sin(angle) * 0.41,
+            anchored: false
+          });
+        }
+      } else if (preset === 'starburst') {
+        // 2-fold or 4-fold symmetric star geometry
+        const arms = count % 2 === 0 ? 4 : 5;
+        nodes.push({ id: 0, x: cx, y: cy, anchored: false });
+        let idx = 1;
+        let ring = 1;
+        while (idx < count) {
+          const ptsInRing = Math.min(arms * (ring === 1 ? 1 : 2), count - idx);
+          const radius = ring === 1 ? 0.17 : ring === 2 ? 0.31 : 0.43;
+          const offset = ring % 2 === 0 ? Math.PI / ptsInRing : -Math.PI / 2;
+          for (let i = 0; i < ptsInRing; i++) {
+            const angle = offset + (i / ptsInRing) * Math.PI * 2;
+            const rMod = ring >= 2 && i % 2 === 1 ? radius * 0.86 : radius;
+            nodes.push({
+              id: idx++,
+              x: cx + Math.cos(angle) * rMod,
+              y: cy + Math.sin(angle) * rMod,
+              anchored: false
+            });
+          }
+          ring++;
+        }
+      } else {
+        // Procedural Seeded Constellation with Poisson-disc minimum spacing & no collinear triples
+        const rng = mulberry32(hashString(seedStr || 'VERTEX'));
+        const minDist = Math.max(0.105, 0.56 / Math.sqrt(count));
+        let attempts = 0;
+
+        while (nodes.length < count && attempts < 6000) {
+          attempts++;
+          const cand = {
+            id: nodes.length,
+            x: 0.09 + rng() * 0.82,
+            y: 0.11 + rng() * 0.78,
+            anchored: false
+          };
+
+          let ok = true;
+          for (let i = 0; i < nodes.length; i++) {
+            const dx = nodes[i].x - cand.x;
+            const dy = nodes[i].y - cand.y;
+            if (Math.hypot(dx, dy) < minDist) {
+              ok = false;
+              break;
+            }
+          }
+          if (!ok) continue;
+
+          // Avoid nearly-collinear triples for crisp non-ambiguous edges
+          for (let i = 0; i < nodes.length && ok; i++) {
+            for (let j = i + 1; j < nodes.length; j++) {
+              const area = Math.abs(
+                (nodes[j].x - nodes[i].x) * (cand.y - nodes[i].y) -
+                (cand.x - nodes[i].x) * (nodes[j].y - nodes[i].y)
+              );
+              if (area < 0.0035) {
+                ok = false;
+                break;
+              }
+            }
+          }
+
+          if (ok) nodes.push(cand);
+        }
+      }
+
+      return nodes;
+    }
+
+    // =========================================================================
+    // 4. GAME STATE & CORE RULES ENGINE
+    // =========================================================================
+    const state = {
+      mode: 'ai-tactical', // 'ranked' | 'online' | 'pvp' | 'ai-easy' | 'ai-tactical'
+      preset: 'hexaring',  // 'hexaring' | 'starburst' | 'random'
+      nodeCount: 19,
+      seed: 'NOVA-9',
+
+      // Online & Ranked Multiplayer Room State
+      online: {
+        isRanked: false,
+        inQueue: false,
+        roomCode: null,
+        myRole: null,        // 1 (Host/P1) | 2 (Guest/P2)
+        p1Uid: null,
+        p2Uid: null,
+        p1Elo: 1200,
+        p2Elo: 1200,
+        p2Connected: false,
+        eloApplied: false,
+        rematchVotes: { 1: false, 2: false }
+      },
+
+      nodes: [],
+      edges: [],      // { u, v, owner, anim: 1 }
+      triangles: [],  // { a, b, c, owner, anim: 1 }
+      scores: { 1: 0, 2: 0 },
+      currentPlayer: 1,
+      turnNumber: 1,
+      colorsSwapped: false,
+      gameOver: false,
+
+      selectedNode: null,
+      hoverNode: null,
+      pointerPos: null,
+      hintEdge: null,
+      history: [],
+      aiThinking: false
+    };
+
+    function edgeKey(u, v) {
+      return u < v ? `${u}-${v}` : `${v}-${u}`;
+    }
+
+    function hasEdge(u, v) {
+      return state.edges.some(e => (e.u === u && e.v === v) || (e.u === v && e.v === u));
+    }
+
+    /**
+     * Validates if connecting node u and node v is legal under all rules:
+     * - Distinct nodes
+     * - Neither node is Anchored (completely surrounded by claimed triangles)
+     * - Edge doesn't already exist
+     * - Segment doesn't pass directly through a 3rd node
+     * - Segment doesn't cross any existing edge
+     */
+    function isValidMove(u, v, nodes = state.nodes, edges = state.edges) {
+      if (u === null || v === null || u === v) return false;
+      if (nodes[u].anchored || nodes[v].anchored) return false;
+      if (edges.some(e => (e.u === u && e.v === v) || (e.u === v && e.v === u))) return false;
+      if (segmentPassesThroughNode(nodes, u, v)) return false;
+
+      const a1 = nodes[u];
+      const a2 = nodes[v];
+      for (let i = 0; i < edges.length; i++) {
+        const e = edges[i];
+        if (segmentsCross(a1, a2, nodes[e.u], nodes[e.v], u, v, e.u, e.v)) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    function getAllValidMoves(nodes = state.nodes, edges = state.edges) {
+      const valid = [];
+      for (let i = 0; i < nodes.length; i++) {
+        if (nodes[i].anchored) continue;
+        for (let j = i + 1; j < nodes.length; j++) {
+          if (nodes[j].anchored) continue;
+          if (isValidMove(i, j, nodes, edges)) {
+            valid.push([i, j]);
+          }
+        }
+      }
+      return valid;
+    }
+
+    /**
+     * Finds all empty triangles formed by adding edge (u, v).
+     * An empty triangle has 3 connected vertices (u, v, w) and 0 other nodes inside it.
+     */
+    function findNewEmptyTriangles(u, v, nodes = state.nodes, edges = state.edges, existingTris = state.triangles) {
+      const created = [];
+      for (let w = 0; w < nodes.length; w++) {
+        if (w === u || w === v) continue;
+        const hasUW = edges.some(e => (e.u === u && e.v === w) || (e.u === w && e.v === u));
+        const hasVW = edges.some(e => (e.u === v && e.v === w) || (e.u === w && e.v === v));
+        if (!hasUW || !hasVW) continue;
+
+        // Check if triangle (u, v, w) already exists
+        const sorted = [u, v, w].sort((a, b) => a - b);
+        const exists = existingTris.some(t => t.a === sorted[0] && t.b === sorted[1] && t.c === sorted[2]);
+        if (exists) continue;
+
+        // Verify triangle is EMPTY (no other constellation node inside it)
+        let containsNode = false;
+        for (let k = 0; k < nodes.length; k++) {
+          if (k === u || k === v || k === w) continue;
+          if (pointInTriangle(nodes[k], nodes[u], nodes[v], nodes[w])) {
+            containsNode = true;
+            break;
+          }
+        }
+
+        if (!containsNode) {
+          created.push({ a: sorted[0], b: sorted[1], c: sorted[2] });
+        }
+      }
+      return created;
+    }
+
+    /**
+     * Updates the 'anchored' status of all nodes.
+     * A node is Anchored if the interior angles of claimed triangles incident to it sum to 2π (360°),
+     * meaning it is completely enclosed in the interior of claimed territory and can never connect again!
+     */
+    function recomputeAnchoredNodes(nodes = state.nodes, triangles = state.triangles) {
+      nodes.forEach(n => (n.anchored = false));
+
+      for (let i = 0; i < nodes.length; i++) {
+        const incident = triangles.filter(t => t.a === i || t.b === i || t.c === i);
+        if (incident.length < 3) continue;
+
+        let totalAngle = 0;
+        const p = nodes[i];
+        for (const t of incident) {
+          const others = [t.a, t.b, t.c].filter(idx => idx !== i);
+          const p1 = nodes[others[0]];
+          const p2 = nodes[others[1]];
+          const v1x = p1.x - p.x;
+          const v1y = p1.y - p.y;
+          const v2x = p2.x - p.x;
+          const v2y = p2.y - p.y;
+          const dot = v1x * v2x + v1y * v2y;
+          const mag = Math.hypot(v1x, v1y) * Math.hypot(v2x, v2y);
+          if (mag > EPS) {
+            const cosTheta = Math.max(-1, Math.min(1, dot / mag));
+            totalAngle += Math.acos(cosTheta);
+          }
+        }
+
+        if (Math.abs(totalAngle - Math.PI * 2) < 0.03) {
+          nodes[i].anchored = true;
+        }
+      }
+    }
+
+    function saveHistorySnapshot() {
+      state.history.push({
+        edges: state.edges.map(e => ({ ...e })),
+        triangles: state.triangles.map(t => ({ ...t })),
+        scores: { ...state.scores },
+        currentPlayer: state.currentPlayer,
+        turnNumber: state.turnNumber,
+        colorsSwapped: state.colorsSwapped,
+        gameOver: state.gameOver
+      });
+    }
+
+    function isOnlineMatch() {
+      return state.mode === 'online' || state.mode === 'ranked';
+    }
+
+    /**
+     * Executes a move connecting node u and node v for the current player.
+     */
+    function executeMove(u, v) {
+      if (state.gameOver || !isValidMove(u, v)) {
+        SoundFX.playInvalid();
+        return false;
+      }
+
+      // Online / Ranked guard: ensure it is actually this client's turn and opponent has joined
+      if (isOnlineMatch()) {
+        if (!state.online.p2Connected) {
+          showToast('Waiting for opponent to join...');
+          return false;
+        }
+        if (state.currentPlayer !== state.online.myRole) {
+          showToast("Opponent's turn");
+          return false;
+        }
+      }
+
+      saveHistorySnapshot();
+      state.hintEdge = null;
+
+      const player = state.currentPlayer;
+      state.edges.push({ u, v, owner: player, anim: 0 });
+
+      const newTris = findNewEmptyTriangles(u, v);
+      if (newTris.length > 0) {
+        newTris.forEach(t => {
+          state.triangles.push({ ...t, owner: player, anim: 0 });
+        });
+        state.scores[player] += newTris.length;
+        recomputeAnchoredNodes();
+        SoundFX.playTriangle(newTris.length);
+        showBonusBanner(newTris.length);
+      } else {
+        SoundFX.playEdge(player);
+      }
+
+      state.selectedNode = null;
+      state.turnNumber++;
+
+      // Check if any valid moves remain
+      const remainingMoves = getAllValidMoves();
+      if (remainingMoves.length === 0) {
+        state.gameOver = true;
+        updateHUD();
+        SoundFX.playWin();
+        if (isOnlineMatch()) {
+          syncOnlineRoomState();
+          finalizeRankedEloIfNeeded();
+        }
+        setTimeout(showVictoryModal, 400);
+        return true;
+      }
+
+      // Bonus turn if triangle(s) were locked! Otherwise pass turn.
+      if (newTris.length === 0) {
+        state.currentPlayer = player === 1 ? 2 : 1;
+      }
+
+      updateHUD();
+
+      if (isOnlineMatch()) {
+        syncOnlineRoomState();
+      } else {
+        triggerAIIfNeeded();
+      }
+      return true;
+    }
+
+    /**
+     * Pie Rule (Turn 2 Fairness Mechanic):
+     * Player 2 swaps ownership of the opening edge and takes control of Player 1's color.
+     */
+    function applyPieRuleSwap() {
+      if (state.turnNumber !== 2 || state.edges.length !== 1 || state.colorsSwapped) return;
+      if (isOnlineMatch() && state.online.myRole !== 2) return;
+
+      saveHistorySnapshot();
+
+      state.edges.forEach(e => (e.owner = e.owner === 1 ? 2 : 1));
+      state.triangles.forEach(t => (t.owner = t.owner === 1 ? 2 : 1));
+      const oldP1 = state.scores[1];
+      state.scores[1] = state.scores[2];
+      state.scores[2] = oldP1;
+
+      state.colorsSwapped = true;
+      state.currentPlayer = 1;
+      state.selectedNode = null;
+
+      SoundFX.playSwap();
+      showToast('Pie Rule: Colors swapped');
+      updateHUD();
+
+      if (isOnlineMatch()) {
+        syncOnlineRoomState();
+      } else {
+        triggerAIIfNeeded();
+      }
+    }
+
+    function undoMove() {
+      if (state.history.length === 0 || state.aiThinking || isOnlineMatch()) return;
+
+      // In AI mode, undo both the AI's response and the player's move so it returns to Player 1's turn
+      let stepsToUndo = 1;
+      if (state.mode !== 'pvp' && state.currentPlayer === 1 && state.history.length >= 2) {
+        stepsToUndo = 2;
+      }
+
+      let snap = null;
+      while (stepsToUndo > 0 && state.history.length > 0) {
+        snap = state.history.pop();
+        stepsToUndo--;
+      }
+
+      if (snap) {
+        state.edges = snap.edges;
+        state.triangles = snap.triangles;
+        state.scores = snap.scores;
+        state.currentPlayer = snap.currentPlayer;
+        state.turnNumber = snap.turnNumber;
+        state.colorsSwapped = snap.colorsSwapped;
+        state.gameOver = snap.gameOver;
+        state.selectedNode = null;
+        state.hintEdge = null;
+        recomputeAnchoredNodes();
+        document.getElementById('modalVictory').classList.add('hidden');
+        updateHUD();
+        SoundFX.playSelect();
+        showToast('Move undone');
+      }
+    }
+
+    // =========================================================================
+    // 5. TACTICAL & CASUAL AI ENGINE
+    // =========================================================================
+    function evaluateMoveForAI(u, v, isTactical) {
+      let score = 0;
+
+      // 1. Immediate triangle completions (huge value + bonus turn)
+      const immediateTris = findNewEmptyTriangles(u, v);
+      score += immediateTris.length * 140;
+
+      if (!isTactical) {
+        return score + (Math.random() - 0.5) * 35;
+      }
+
+      // 2. Simulate adding this edge and see if it hands the opponent an easy triangle
+      const simEdges = [...state.edges, { u, v, owner: 2 }];
+      const simTris = [...state.triangles, ...immediateTris.map(t => ({ ...t, owner: 2 }))];
+      const simNodes = state.nodes.map(n => ({ ...n }));
+      recomputeAnchoredNodes(simNodes, simTris);
+
+      let opponentChances = 0;
+      let myFollowUpChances = 0;
+
+      for (let i = 0; i < simNodes.length; i++) {
+        if (simNodes[i].anchored) continue;
+        for (let j = i + 1; j < simNodes.length; j++) {
+          if (simNodes[j].anchored) continue;
+          if (!isValidMove(i, j, simNodes, simEdges)) continue;
+          const futureTris = findNewEmptyTriangles(i, j, simNodes, simEdges, simTris);
+          if (futureTris.length > 0) {
+            if (immediateTris.length > 0) {
+              // If we earned a bonus turn, these follow-ups are OURS!
+              myFollowUpChances += futureTris.length;
+            } else {
+              // Otherwise we just set up the opponent!
+              opponentChances += futureTris.length;
+            }
+          }
+        }
+      }
+
+      score += myFollowUpChances * 95;
+      score -= opponentChances * 85;
+
+      // 3. Centrality & territorial reach bonus
+      const midX = (state.nodes[u].x + state.nodes[v].x) * 0.5;
+      const midY = (state.nodes[u].y + state.nodes[v].y) * 0.5;
+      const distCenter = Math.hypot(midX - 0.5, midY - 0.5);
+      score += (0.5 - distCenter) * 14;
+
+      // Slight jitter so equal moves feel organic
+      score += (Math.random() - 0.5) * 4;
+      return score;
+    }
+
+    function triggerAIIfNeeded() {
+      if (state.gameOver || state.mode === 'pvp' || isOnlineMatch() || state.currentPlayer !== 2) return;
+
+      state.aiThinking = true;
+      updateHUD();
+
+      setTimeout(() => {
+        if (state.gameOver || state.currentPlayer !== 2) {
+          state.aiThinking = false;
+          return;
+        }
+
+        // Consider Pie Rule on Turn 2 if Player 1 made an ultra-strong center opening
+        if (state.turnNumber === 2 && state.edges.length === 1 && !state.colorsSwapped && state.mode === 'ai-tactical') {
+          const e = state.edges[0];
+          const midX = (state.nodes[e.u].x + state.nodes[e.v].x) * 0.5;
+          const midY = (state.nodes[e.u].y + state.nodes[e.v].y) * 0.5;
+          if (Math.hypot(midX - 0.5, midY - 0.5) < 0.08 && Math.random() < 0.45) {
+            state.aiThinking = false;
+            applyPieRuleSwap();
+            return;
+          }
+        }
+
+        const moves = getAllValidMoves();
+        if (moves.length === 0) {
+          state.aiThinking = false;
+          return;
+        }
+
+        const isTactical = state.mode === 'ai-tactical';
+        let bestMove = moves[0];
+        let bestScore = -Infinity;
+
+        for (const [u, v] of moves) {
+          const val = evaluateMoveForAI(u, v, isTactical);
+          if (val > bestScore) {
+            bestScore = val;
+            bestMove = [u, v];
+          }
+        }
+
+        state.aiThinking = false;
+        executeMove(bestMove[0], bestMove[1]);
+      }, 360);
+    }
+
+    function computeBestHint() {
+      const moves = getAllValidMoves();
+      if (moves.length === 0) return null;
+      let best = moves[0];
+      let bestVal = -Infinity;
+      for (const [u, v] of moves) {
+        const val = evaluateMoveForAI(u, v, true);
+        if (val > bestVal) {
+          bestVal = val;
+          best = [u, v];
+        }
+      }
+      return best;
+    }
+
+    // =========================================================================
+    // 6. ONLINE & RANKED ELO MATCHMAKING SYNCHRONIZATION (Firestore)
+    // =========================================================================
+    function generateRoomCode() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let code = '';
+      for (let i = 0; i < 6; i++) {
+        code += chars[Math.floor(Math.random() * chars.length)];
+      }
+      return code;
+    }
+
+    function getRoomDocRef(code) {
+      return doc(db, 'artifacts', appId, 'public', 'data', 'vertex_rooms', code.toUpperCase());
+    }
+
+    function getQueueDocRef(uid) {
+      return doc(db, 'artifacts', appId, 'public', 'data', 'vertex_ranked_queue', uid);
+    }
+
+    async function startRankedMatchmaking() {
+      if (!db || !currentUser) {
+        showToast('Connecting to ranked server...');
+        return;
+      }
+
+      await cancelRankedMatchmaking(true);
+      state.online.inQueue = true;
+
+      const statusBox = document.getElementById('rankedQueueStatus');
+      const statusText = document.getElementById('rankedQueueText');
+      statusBox.classList.remove('hidden');
+
+      let searchWindow = 120;
+      const startTime = Date.now();
+      statusText.textContent = `Matching near ${playerProfile.elo} Elo (±${searchWindow})...`;
+
+      try {
+        // 1. Scan active queue for best Elo match
+        const queueCol = collection(db, 'artifacts', appId, 'public', 'data', 'vertex_ranked_queue');
+        const snap = await getDocs(queueCol);
+        let bestCandidate = null;
+        let bestDiff = Infinity;
+
+        snap.forEach((docSnap) => {
+          const entry = docSnap.data();
+          if (entry.uid === currentUser.uid) return;
+          if (entry.status !== 'waiting') return;
+          // Ignore stale entries older than 90 seconds
+          if (Date.now() - (entry.createdAt || 0) > 90000) return;
+
+          const diff = Math.abs((entry.elo || 1200) - playerProfile.elo);
+          if (diff <= 450 && diff < bestDiff) {
+            bestDiff = diff;
+            bestCandidate = entry;
+          }
+        });
+
+        if (bestCandidate && bestCandidate.roomCode) {
+          // Join candidate's ranked room as Player 2
+          const roomRef = getRoomDocRef(bestCandidate.roomCode);
+          const roomSnap = await getDoc(roomRef);
+          if (roomSnap.exists() && !roomSnap.data().p2Uid) {
+            await updateDoc(getQueueDocRef(bestCandidate.uid), {
+              status: 'matched',
+              matchedWith: currentUser.uid
+            });
+
+            await updateDoc(roomRef, {
+              p2Uid: currentUser.uid,
+              p2Elo: playerProfile.elo,
+              updatedAt: Date.now()
+            });
+
+            state.online.inQueue = false;
+            statusBox.classList.add('hidden');
+            state.mode = 'ranked';
+            state.online.isRanked = true;
+            state.online.roomCode = bestCandidate.roomCode;
+            state.online.myRole = 2;
+            state.online.eloApplied = false;
+
+            document.getElementById('modalSetup').classList.add('hidden');
+            subscribeToOnlineRoom(bestCandidate.roomCode);
+            showToast(`Ranked match found vs ${bestCandidate.elo} Elo!`);
+            return;
+          }
+        }
+
+        // 2. Otherwise create a standardized competitive room (19-node Hexa-Ring) & wait in queue
+        const code = generateRoomCode();
+        const nodes = generateConstellation('hexaring', 19, 'RANKED');
+
+        await setDoc(getRoomDocRef(code), {
+          roomCode: code,
+          isRanked: true,
+          preset: 'hexaring',
+          nodeCount: nodes.length,
+          seed: 'RANKED',
+          nodes: nodes.map(n => ({ id: n.id, x: n.x, y: n.y, anchored: false })),
+          edges: [],
+          triangles: [],
+          scores: { 1: 0, 2: 0 },
+          currentPlayer: 1,
+          turnNumber: 1,
+          colorsSwapped: false,
+          gameOver: false,
+          p1Uid: currentUser.uid,
+          p1Elo: playerProfile.elo,
+          p2Uid: null,
+          p2Elo: 1200,
+          rematchVotes: { 1: false, 2: false },
+          updatedAt: Date.now()
+        });
+
+        await setDoc(getQueueDocRef(currentUser.uid), {
+          uid: currentUser.uid,
+          elo: playerProfile.elo,
+          roomCode: code,
+          status: 'waiting',
+          createdAt: Date.now()
+        });
+
+        // Expand Elo range indicator smoothly over time
+        queueExpandTimer = setInterval(() => {
+          const elapsed = Math.floor((Date.now() - startTime) / 1000);
+          searchWindow = Math.min(500, 120 + elapsed * 15);
+          statusText.textContent = `Matching near ${playerProfile.elo} Elo (±${searchWindow}) · ${elapsed}s`;
+        }, 1000);
+
+        // Listen for opponent joining our room
+        queueUnsubscribe = onSnapshot(getRoomDocRef(code), async (rSnap) => {
+          if (!rSnap.exists()) return;
+          const rData = rSnap.data();
+          if (rData.p2Uid) {
+            await cancelRankedMatchmaking(true);
+            state.mode = 'ranked';
+            state.online.isRanked = true;
+            state.online.roomCode = code;
+            state.online.myRole = 1;
+            state.online.eloApplied = false;
+
+            document.getElementById('modalSetup').classList.add('hidden');
+            subscribeToOnlineRoom(code);
+            showToast(`Ranked match found vs ${rData.p2Elo || 1200} Elo!`);
+          }
+        });
+      } catch (err) {
+        console.error('Ranked matchmaking error:', err);
+        showToast('Matchmaking error — please retry.');
+        await cancelRankedMatchmaking(true);
+      }
+    }
+
+    async function cancelRankedMatchmaking(silent = false) {
+      state.online.inQueue = false;
+      if (queueExpandTimer) {
+        clearInterval(queueExpandTimer);
+        queueExpandTimer = null;
+      }
+      if (queueUnsubscribe) {
+        queueUnsubscribe();
+        queueUnsubscribe = null;
+      }
+      document.getElementById('rankedQueueStatus').classList.add('hidden');
+      if (db && currentUser) {
+        try {
+          await deleteDoc(getQueueDocRef(currentUser.uid));
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+      }
+      if (!silent) showToast('Ranked search cancelled');
+    }
+
+    async function finalizeRankedEloIfNeeded() {
+      if (!state.online.isRanked || state.online.eloApplied || !db || !currentUser) return;
+      state.online.eloApplied = true;
+
+      const myRole = state.online.myRole;
+      const myScore = state.scores[myRole];
+      const oppScore = state.scores[myRole === 1 ? 2 : 1];
+      const myOldElo = myRole === 1 ? state.online.p1Elo : state.online.p2Elo;
+      const oppElo = myRole === 1 ? state.online.p2Elo : state.online.p1Elo;
+
+      let resultScore = 0.5;
+      if (myScore > oppScore) {
+        resultScore = 1;
+        playerProfile.wins++;
+      } else if (myScore < oppScore) {
+        resultScore = 0;
+        playerProfile.losses++;
+      } else {
+        playerProfile.draws++;
+      }
+
+      const delta = calculateEloDelta(myOldElo, oppElo, resultScore);
+      const newElo = Math.max(100, myOldElo + delta);
+      playerProfile.elo = newElo;
+      updateEloUI();
+
+      // Update Victory Modal Elo display
+      const eloBox = document.getElementById('victoryEloBox');
+      const eloNewEl = document.getElementById('victoryEloNew');
+      const eloDeltaEl = document.getElementById('victoryEloDelta');
+      eloBox.classList.remove('hidden');
+      eloNewEl.textContent = newElo;
+      eloDeltaEl.textContent = delta >= 0 ? `(+${delta})` : `(${delta})`;
+
+      try {
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'vertex_profiles', currentUser.uid), {
+          uid: currentUser.uid,
+          elo: newElo,
+          wins: playerProfile.wins,
+          losses: playerProfile.losses,
+          draws: playerProfile.draws,
+          updatedAt: Date.now()
+        }, { merge: true });
+      } catch (err) {
+        console.error('Failed to save Elo update:', err);
+      }
+    }
+
+    async function createOnlineRoom() {
+      if (!db || !currentUser) {
+        showToast('Online service connecting...');
+        return;
+      }
+
+      const code = generateRoomCode();
+      const nodes = generateConstellation(state.preset, state.nodeCount, state.seed);
+
+      const initialRoomData = {
+        roomCode: code,
+        isRanked: false,
+        preset: state.preset,
+        nodeCount: nodes.length,
+        seed: state.seed,
+        nodes: nodes.map(n => ({ id: n.id, x: n.x, y: n.y, anchored: false })),
+        edges: [],
+        triangles: [],
+        scores: { 1: 0, 2: 0 },
+        currentPlayer: 1,
+        turnNumber: 1,
+        colorsSwapped: false,
+        gameOver: false,
+        p1Uid: currentUser.uid,
+        p1Elo: playerProfile.elo,
+        p2Uid: null,
+        p2Elo: 1200,
+        rematchVotes: { 1: false, 2: false },
+        updatedAt: Date.now()
+      };
+
+      try {
+        await setDoc(getRoomDocRef(code), initialRoomData);
+        state.mode = 'online';
+        state.online.isRanked = false;
+        state.online.roomCode = code;
+        state.online.myRole = 1;
+        state.online.p1Uid = currentUser.uid;
+        state.online.p1Elo = playerProfile.elo;
+        state.online.p2Uid = null;
+        state.online.p2Connected = false;
+        state.online.eloApplied = false;
+
+        subscribeToOnlineRoom(code);
+        showToast(`Room ${code} created`);
+      } catch (err) {
+        console.error('Error creating room:', err);
+        showToast('Failed to create room.');
+      }
+    }
+
+    async function joinOnlineRoom(rawCode) {
+      const code = (rawCode || '').trim().toUpperCase();
+      if (code.length < 4) {
+        showToast('Enter a valid room code.');
+        return;
+      }
+      if (!db || !currentUser) {
+        showToast('Online service connecting...');
+        return;
+      }
+
+      try {
+        const roomRef = getRoomDocRef(code);
+        const snap = await getDoc(roomRef);
+        if (!snap.exists()) {
+          showToast(`Room "${code}" not found.`);
+          return;
+        }
+
+        const data = snap.data();
+        let assignedRole = null;
+
+        if (data.p1Uid === currentUser.uid) {
+          assignedRole = 1;
+        } else if (!data.p2Uid || data.p2Uid === currentUser.uid) {
+          assignedRole = 2;
+          await updateDoc(roomRef, {
+            p2Uid: currentUser.uid,
+            p2Elo: playerProfile.elo,
+            updatedAt: Date.now()
+          });
+        } else {
+          showToast('Room is full.');
+          return;
+        }
+
+        state.mode = data.isRanked ? 'ranked' : 'online';
+        state.online.isRanked = Boolean(data.isRanked);
+        state.online.roomCode = code;
+        state.online.myRole = assignedRole;
+        state.online.eloApplied = false;
+
+        document.getElementById('modalSetup').classList.add('hidden');
+        subscribeToOnlineRoom(code);
+        showToast(`Joined ${code} as Player ${assignedRole}`);
+      } catch (err) {
+        console.error('Error joining room:', err);
+        showToast('Could not join room.');
+      }
+    }
+
+    function subscribeToOnlineRoom(code) {
+      if (roomUnsubscribe) {
+        roomUnsubscribe();
+        roomUnsubscribe = null;
+      }
+
+      const roomRef = getRoomDocRef(code);
+      roomUnsubscribe = onSnapshot(roomRef, (snap) => {
+        if (!snap.exists()) return;
+        const data = snap.data();
+
+        const prevEdgeCount = state.edges.length;
+        const prevTriCount = state.triangles.length;
+        const wasSwapped = state.colorsSwapped;
+        const wasGameOver = state.gameOver;
+
+        state.preset = data.preset;
+        state.nodeCount = data.nodeCount;
+        state.seed = data.seed;
+        state.nodes = (data.nodes || []).map(n => ({ ...n }));
+        state.edges = (data.edges || []).map(e => ({ ...e, anim: 1 }));
+        state.triangles = (data.triangles || []).map(t => ({ ...t, anim: 1 }));
+        state.scores = data.scores || { 1: 0, 2: 0 };
+        state.currentPlayer = data.currentPlayer;
+        state.turnNumber = data.turnNumber;
+        state.colorsSwapped = Boolean(data.colorsSwapped);
+        state.gameOver = Boolean(data.gameOver);
+        state.hintEdge = null; // Strictly disable hints in online/ranked matches
+
+        state.online.isRanked = Boolean(data.isRanked);
+        state.online.p1Uid = data.p1Uid;
+        state.online.p2Uid = data.p2Uid;
+        state.online.p1Elo = data.p1Elo || 1200;
+        state.online.p2Elo = data.p2Elo || 1200;
+        state.online.p2Connected = Boolean(data.p2Uid);
+        state.online.rematchVotes = data.rematchVotes || { 1: false, 2: false };
+
+        recomputeAnchoredNodes();
+
+        if (state.edges.length > prevEdgeCount) {
+          if (state.triangles.length > prevTriCount) {
+            SoundFX.playTriangle(state.triangles.length - prevTriCount);
+            showBonusBanner(state.triangles.length - prevTriCount);
+          } else {
+            SoundFX.playEdge(state.edges[state.edges.length - 1].owner);
+          }
+        } else if (!wasSwapped && state.colorsSwapped) {
+          SoundFX.playSwap();
+          showToast('Pie Rule: Colors swapped');
+        }
+
+        // Check if both players voted for rematch (non-ranked private rooms only)
+        if (!state.online.isRanked && state.online.rematchVotes[1] && state.online.rematchVotes[2] && state.online.myRole === 1) {
+          resetOnlineRoomForRematch();
+        }
+
+        if (wasGameOver && !state.gameOver) {
+          document.getElementById('modalVictory').classList.add('hidden');
+          showToast('Rematch started');
+        } else if (!wasGameOver && state.gameOver) {
+          SoundFX.playWin();
+          finalizeRankedEloIfNeeded();
+          setTimeout(showVictoryModal, 400);
+        }
+
+        const rematchEl = document.getElementById('rematchVoteStatus');
+        if (!state.online.isRanked && state.gameOver && (state.online.rematchVotes[1] || state.online.rematchVotes[2])) {
+          rematchEl.classList.remove('hidden');
+          const myVote = state.online.rematchVotes[state.online.myRole];
+          rematchEl.textContent = myVote
+            ? 'Waiting for opponent rematch vote...'
+            : 'Opponent requested rematch';
+        } else {
+          rematchEl.classList.add('hidden');
+        }
+
+        updateHUD();
+      });
+    }
+
+    async function syncOnlineRoomState() {
+      if (!isOnlineMatch() || !state.online.roomCode || !db) return;
+      try {
+        await updateDoc(getRoomDocRef(state.online.roomCode), {
+          edges: state.edges.map(e => ({ u: e.u, v: e.v, owner: e.owner })),
+          triangles: state.triangles.map(t => ({ a: t.a, b: t.b, c: t.c, owner: t.owner })),
+          scores: state.scores,
+          currentPlayer: state.currentPlayer,
+          turnNumber: state.turnNumber,
+          colorsSwapped: state.colorsSwapped,
+          gameOver: state.gameOver,
+          updatedAt: Date.now()
+        });
+      } catch (err) {
+        console.error('Failed to sync online move:', err);
+      }
+    }
+
+    async function voteOnlineRematch() {
+      if (!isOnlineMatch() || !state.online.roomCode || !db) return;
+      if (state.online.isRanked) {
+        // In ranked mode, "Play Again" leaves current match and opens ranked queue
+        leaveOnlineRoom();
+        state.mode = 'ranked';
+        syncSetupModalUI();
+        document.getElementById('modalSetup').classList.remove('hidden');
+        startRankedMatchmaking();
+        return;
+      }
+      const role = state.online.myRole;
+      try {
+        await updateDoc(getRoomDocRef(state.online.roomCode), {
+          [`rematchVotes.${role}`]: true,
+          updatedAt: Date.now()
+        });
+      } catch (err) {
+        console.error('Rematch vote failed:', err);
+      }
+    }
+
+    async function resetOnlineRoomForRematch() {
+      if (!state.online.roomCode || !db) return;
+      const nodes = generateConstellation(state.preset, state.nodeCount, state.seed);
+      try {
+        await updateDoc(getRoomDocRef(state.online.roomCode), {
+          nodes: nodes.map(n => ({ id: n.id, x: n.x, y: n.y, anchored: false })),
+          edges: [],
+          triangles: [],
+          scores: { 1: 0, 2: 0 },
+          currentPlayer: 1,
+          turnNumber: 1,
+          colorsSwapped: false,
+          gameOver: false,
+          rematchVotes: { 1: false, 2: false },
+          updatedAt: Date.now()
+        });
+      } catch (err) {
+        console.error('Failed to reset room:', err);
+      }
+    }
+
+    function leaveOnlineRoom() {
+      if (roomUnsubscribe) {
+        roomUnsubscribe();
+        roomUnsubscribe = null;
+      }
+      state.online.isRanked = false;
+      state.online.roomCode = null;
+      state.online.myRole = null;
+      state.online.p1Uid = null;
+      state.online.p2Uid = null;
+      state.online.p2Connected = false;
+      state.online.eloApplied = false;
+      state.mode = 'ai-tactical';
+      startNewGame();
+      showToast('Left online match');
+    }
+
+    // =========================================================================
+    // 7. CANVAS RENDERING & FLUID INTERACTION
+    // =========================================================================
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const container = document.getElementById('canvasContainer');
+
+    let canvasW = 800;
+    let canvasH = 600;
+    let dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    function resizeCanvas() {
+      const rect = container.getBoundingClientRect();
+      canvasW = Math.max(280, rect.width);
+      canvasH = Math.max(280, rect.height);
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+      canvas.width = Math.floor(canvasW * dpr);
+      canvas.height = Math.floor(canvasH * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+
+    function nodeToScreen(node) {
+      const pad = Math.min(canvasW, canvasH) * 0.08;
+      const drawW = canvasW - pad * 2;
+      const drawH = canvasH - pad * 2;
+      return {
+        x: pad + node.x * drawW,
+        y: pad + node.y * drawH
+      };
+    }
+
+    function findClosestNode(screenX, screenY, maxDist = 28) {
+      let closest = null;
+      let bestD = maxDist;
+      for (let i = 0; i < state.nodes.length; i++) {
+        const pos = nodeToScreen(state.nodes[i]);
+        const d = Math.hypot(pos.x - screenX, pos.y - screenY);
+        if (d < bestD) {
+          bestD = d;
+          closest = i;
+        }
+      }
+      return closest;
+    }
+
+    function getPointerCoords(evt) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+      const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+      return {
+        x: clientX - rect.left,
+        y: clientY - rect.top
+      };
+    }
+
+    let isDragging = false;
+
+    function handlePointerDown(evt) {
+      if (state.gameOver || state.aiThinking) return;
+      if (isOnlineMatch() && (!state.online.p2Connected || state.currentPlayer !== state.online.myRole)) {
+        return;
+      }
+
+      const pt = getPointerCoords(evt);
+      state.pointerPos = pt;
+      const hit = findClosestNode(pt.x, pt.y, 32);
+
+      if (hit !== null) {
+        if (state.nodes[hit].anchored) {
+          SoundFX.playInvalid();
+          showToast('Anchored node — completely surrounded by territory!');
+          return;
+        }
+
+        if (state.selectedNode !== null && state.selectedNode !== hit) {
+          // Attempt connection from previously selected node to this node
+          if (isValidMove(state.selectedNode, hit)) {
+            executeMove(state.selectedNode, hit);
+            isDragging = false;
+            return;
+          } else {
+            // Switch selection to the newly tapped node
+            state.selectedNode = hit;
+            isDragging = true;
+            SoundFX.playSelect();
+          }
+        } else if (state.selectedNode === hit) {
+          // Deselect if tapped again
+          state.selectedNode = null;
+          isDragging = false;
+        } else {
+          state.selectedNode = hit;
+          isDragging = true;
+          SoundFX.playSelect();
+        }
+      } else {
+        state.selectedNode = null;
+        isDragging = false;
+      }
+    }
+
+    function handlePointerMove(evt) {
+      const pt = getPointerCoords(evt);
+      state.pointerPos = pt;
+      state.hoverNode = findClosestNode(pt.x, pt.y, 28);
+    }
+
+    function handlePointerUp(evt) {
+      if (!isDragging || state.selectedNode === null) return;
+      isDragging = false;
+
+      const hit = state.hoverNode;
+      if (hit !== null && hit !== state.selectedNode) {
+        if (isValidMove(state.selectedNode, hit)) {
+          executeMove(state.selectedNode, hit);
+        } else {
+          SoundFX.playInvalid();
+          showToast('Invalid move — lines cannot cross existing edges!');
+        }
+      }
+    }
+
+    canvas.addEventListener('mousedown', handlePointerDown);
+    canvas.addEventListener('mousemove', handlePointerMove);
+    window.addEventListener('mouseup', handlePointerUp);
+
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      handlePointerDown(e);
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      handlePointerMove(e);
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      handlePointerUp(e);
+    }, { passive: false });
+
+    // Main Render Loop
+    let pulsePhase = 0;
+
+    function renderLoop() {
+      ctx.clearRect(0, 0, canvasW, canvasH);
+      const pal = getPalette();
+
+      // 1. Render Claimed Empty Triangles (Flat Architectural Fills)
+      for (const tri of state.triangles) {
+        if (tri.anim < 1) tri.anim = Math.min(1, tri.anim + 0.1);
+        const pa = nodeToScreen(state.nodes[tri.a]);
+        const pb = nodeToScreen(state.nodes[tri.b]);
+        const pc = nodeToScreen(state.nodes[tri.c]);
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(pa.x, pa.y);
+        ctx.lineTo(pb.x, pb.y);
+        ctx.lineTo(pc.x, pc.y);
+        ctx.closePath();
+
+        ctx.globalAlpha = tri.anim;
+        ctx.fillStyle = tri.owner === 1 ? pal.p1Fill : pal.p2Fill;
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // 2. Render Hint Edge (if active)
+      if (state.hintEdge && !state.gameOver) {
+        const [hu, hv] = state.hintEdge;
+        const p1 = nodeToScreen(state.nodes[hu]);
+        const p2 = nodeToScreen(state.nodes[hv]);
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.strokeStyle = pal.hintStroke;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 4]);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 3. Render Valid Target Guides when a Node is Selected
+      if (state.selectedNode !== null && !state.gameOver) {
+        const origin = nodeToScreen(state.nodes[state.selectedNode]);
+        for (let j = 0; j < state.nodes.length; j++) {
+          if (j === state.selectedNode) continue;
+          if (isValidMove(state.selectedNode, j)) {
+            const target = nodeToScreen(state.nodes[j]);
+            const wouldScore = findNewEmptyTriangles(state.selectedNode, j).length > 0;
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(origin.x, origin.y);
+            ctx.lineTo(target.x, target.y);
+            ctx.strokeStyle = wouldScore ? pal.guideScore : pal.guideNormal;
+            ctx.lineWidth = wouldScore ? 1.25 : 0.8;
+            ctx.setLineDash([2, 5]);
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
+      }
+
+      // 4. Render Active Aiming Line from Selected Node to Pointer/Hover Node
+      if (state.selectedNode !== null && state.pointerPos && !state.gameOver) {
+        const pStart = nodeToScreen(state.nodes[state.selectedNode]);
+        let pEnd = state.pointerPos;
+        let lineValid = true;
+
+        if (state.hoverNode !== null && state.hoverNode !== state.selectedNode) {
+          pEnd = nodeToScreen(state.nodes[state.hoverNode]);
+          lineValid = isValidMove(state.selectedNode, state.hoverNode);
+        }
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(pStart.x, pStart.y);
+        ctx.lineTo(pEnd.x, pEnd.y);
+        if (!lineValid) {
+          ctx.strokeStyle = pal.invalidStroke;
+        } else {
+          ctx.strokeStyle = state.currentPlayer === 1 ? pal.p1Aim : pal.p2Aim;
+        }
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 4]);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 5. Render Woven Edges (Hairline Ink Precision)
+      for (const edge of state.edges) {
+        if (edge.anim < 1) edge.anim = Math.min(1, edge.anim + 0.16);
+        const p1 = nodeToScreen(state.nodes[edge.u]);
+        const p2 = nodeToScreen(state.nodes[edge.v]);
+        const curX = p1.x + (p2.x - p1.x) * edge.anim;
+        const curY = p1.y + (p2.y - p1.y) * edge.anim;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(curX, curY);
+        ctx.lineCap = 'round';
+        ctx.lineWidth = 1.8;
+        ctx.strokeStyle = edge.owner === 1 ? pal.p1Stroke : pal.p2Stroke;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 6. Render Constellation Nodes (Minimal Dots)
+      for (let i = 0; i < state.nodes.length; i++) {
+        const node = state.nodes[i];
+        const pos = nodeToScreen(node);
+        const isSelected = state.selectedNode === i;
+        const isHovered = state.hoverNode === i;
+        const isCandidate =
+          state.selectedNode !== null &&
+          state.selectedNode !== i &&
+          isValidMove(state.selectedNode, i);
+
+        ctx.save();
+
+        if (isSelected) {
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, 9.5, 0, Math.PI * 2);
+          ctx.strokeStyle = state.currentPlayer === 1 ? pal.p1Stroke : pal.p2Stroke;
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+        } else if (isCandidate && isHovered) {
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, 8.5, 0, Math.PI * 2);
+          ctx.strokeStyle = pal.nodeHoverRing;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+
+        const radius = node.anchored ? 3 : isSelected || isHovered ? 4.8 : 3.8;
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
+
+        if (node.anchored) {
+          ctx.fillStyle = pal.nodeAnchoredFill;
+          ctx.strokeStyle = pal.nodeAnchoredStroke;
+          ctx.lineWidth = 1;
+        } else if (isSelected) {
+          ctx.fillStyle = state.currentPlayer === 1 ? pal.p1Stroke : pal.p2Stroke;
+          ctx.strokeStyle = pal.nodeStroke;
+          ctx.lineWidth = 1.2;
+        } else {
+          ctx.fillStyle = pal.nodeFill;
+          ctx.strokeStyle = pal.nodeStroke;
+          ctx.lineWidth = 1.2;
+        }
+
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      requestAnimationFrame(renderLoop);
+    }
+
+    // =========================================================================
+    // 8. HUD, NOTIFICATIONS & MODAL CONTROLLERS
+    // =========================================================================
+    let toastTimer = null;
+    function showToast(msg) {
+      const el = document.getElementById('toastPill');
+      el.textContent = msg;
+      el.classList.remove('hidden', 'toast-enter');
+      void el.offsetWidth; // trigger reflow
+      el.classList.add('toast-enter');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        el.classList.add('hidden');
+      }, 2600);
+    }
+
+    let bonusTimer = null;
+    function showBonusBanner(triCount) {
+      const el = document.getElementById('bonusBanner');
+      el.textContent = `+${triCount} TRIANGLE LOCK${triCount > 1 ? 'S' : ''} • BONUS TURN!`;
+      el.classList.remove('hidden');
+      clearTimeout(bonusTimer);
+      bonusTimer = setTimeout(() => {
+        el.classList.add('hidden');
+      }, 2200);
+    }
+
+    function updateHUD() {
+      document.getElementById('scoreP1').textContent = state.scores[1];
+      document.getElementById('scoreP2').textContent = state.scores[2];
+
+      const validCount = getAllValidMoves().length;
+      document.getElementById('validMovesCount').textContent = validCount;
+
+      // Player Names & Subtitles
+      const labelP1 = document.getElementById('labelP1');
+      const subP1 = document.getElementById('subP1');
+      const labelP2 = document.getElementById('labelP2');
+      const subP2 = document.getElementById('subP2');
+
+      if (isOnlineMatch()) {
+        labelP1.textContent = state.online.myRole === 1 ? 'PLAYER 1 (YOU)' : 'PLAYER 1';
+        subP1.textContent = state.online.isRanked ? `${state.online.p1Elo} Elo` : 'Host';
+        labelP2.textContent = state.online.myRole === 2 ? 'PLAYER 2 (YOU)' : 'PLAYER 2';
+        subP2.textContent = state.online.p2Connected
+          ? (state.online.isRanked ? `${state.online.p2Elo} Elo` : 'Guest')
+          : 'Waiting...';
+      } else if (state.mode === 'pvp') {
+        labelP1.textContent = 'PLAYER 1';
+        subP1.textContent = 'P1';
+        labelP2.textContent = 'PLAYER 2';
+        subP2.textContent = 'P2';
+      } else {
+        labelP1.textContent = 'YOU';
+        subP1.textContent = 'P1';
+        labelP2.textContent = state.mode === 'ai-tactical' ? 'AI HARD' : 'AI EASY';
+        subP2.textContent = state.aiThinking ? '...' : 'P2';
+      }
+
+      // Active Turn Card Styling
+      const cardP1 = document.getElementById('cardP1');
+      const cardP2 = document.getElementById('cardP2');
+      const turnBadge = document.getElementById('turnBadge');
+
+      cardP1.classList.remove('turn-active-p1');
+      cardP2.classList.remove('turn-active-p2');
+
+      if (state.gameOver) {
+        turnBadge.textContent = 'END';
+        turnBadge.className = 'font-mono-tech text-[10px] uppercase tracking-widest px-2 py-0.5 rounded surface-panel text-sub';
+      } else if (state.currentPlayer === 1) {
+        cardP1.classList.add('turn-active-p1');
+        turnBadge.textContent = 'P1';
+        turnBadge.className = 'font-mono-tech text-[10px] uppercase tracking-widest px-2 py-0.5 rounded surface-panel p1-text turn-active-p1';
+      } else {
+        cardP2.classList.add('turn-active-p2');
+        turnBadge.textContent = 'P2';
+        turnBadge.className = 'font-mono-tech text-[10px] uppercase tracking-widest px-2 py-0.5 rounded surface-panel p2-text turn-active-p2';
+      }
+
+      // Arena Metadata Tag
+      const presetNames = {
+        hexaring: 'Hexa-Ring',
+        starburst: 'Starburst',
+        random: 'Seeded'
+      };
+      document.getElementById('hudPresetName').textContent = presetNames[state.preset] || 'Arena';
+      document.getElementById('hudNodeCount').textContent = `${state.nodes.length}n`;
+      const seedTag = document.getElementById('hudSeedTag');
+      if (state.preset === 'random') {
+        seedTag.textContent = `#${state.seed}`;
+        seedTag.classList.remove('hidden');
+      } else {
+        seedTag.classList.add('hidden');
+      }
+
+      const rankedBadge = document.getElementById('hudRankedBadge');
+      if (state.online.isRanked) {
+        rankedBadge.classList.remove('hidden');
+      } else {
+        rankedBadge.classList.add('hidden');
+      }
+
+      // Pie Rule Bar visibility (Turn 2, exactly 1 edge, not yet swapped)
+      const pieBar = document.getElementById('pieRuleBar');
+      const canShowPie =
+        !state.gameOver &&
+        state.turnNumber === 2 &&
+        state.edges.length === 1 &&
+        !state.colorsSwapped &&
+        (state.mode === 'pvp' || (isOnlineMatch() && state.online.myRole === 2));
+
+      if (canShowPie) {
+        pieBar.classList.remove('hidden');
+      } else {
+        pieBar.classList.add('hidden');
+      }
+
+      // Online Room Pill & Footer Controls (Hints & Undo strictly disabled online)
+      const onlinePill = document.getElementById('onlineRoomPill');
+      const btnLeave = document.getElementById('btnLeaveRoom');
+      const btnUndo = document.getElementById('btnUndo');
+      const btnHint = document.getElementById('btnHint');
+      const btnNewGame = document.getElementById('btnNewGame');
+
+      if (isOnlineMatch() && state.online.roomCode) {
+        onlinePill.classList.remove('hidden');
+        onlinePill.classList.add('flex');
+        btnLeave.classList.remove('hidden');
+        btnUndo.classList.add('hidden');
+        btnHint.classList.add('hidden');
+        btnNewGame.classList.add('hidden');
+
+        document.getElementById('hudRoomCode').textContent = state.online.isRanked
+          ? `RANKED · ${state.online.roomCode}`
+          : state.online.roomCode;
+        const dot = document.getElementById('onlinePresenceDot');
+        dot.className = state.online.p2Connected
+          ? 'w-1.5 h-1.5 rounded-full p1-dot'
+          : 'w-1.5 h-1.5 rounded-full p2-dot';
+      } else {
+        onlinePill.classList.add('hidden');
+        onlinePill.classList.remove('flex');
+        btnLeave.classList.add('hidden');
+        btnUndo.classList.remove('hidden');
+        btnHint.classList.remove('hidden');
+        btnNewGame.classList.remove('hidden');
+        btnUndo.disabled = state.history.length === 0 || state.aiThinking;
+        btnHint.disabled = state.gameOver || state.aiThinking;
+      }
+    }
+
+    function showVictoryModal() {
+      const p1 = state.scores[1];
+      const p2 = state.scores[2];
+      const titleEl = document.getElementById('victoryTitle');
+      const badgeEl = document.getElementById('victoryBadge');
+
+      if (!state.online.isRanked) {
+        document.getElementById('victoryEloBox').classList.add('hidden');
+      }
+
+      document.getElementById('endNameP1').textContent = document.getElementById('labelP1').textContent;
+      document.getElementById('endNameP2').textContent = document.getElementById('labelP2').textContent;
+      document.getElementById('endScoreP1').textContent = p1;
+      document.getElementById('endScoreP2').textContent = p2;
+
+      if (p1 > p2) {
+        titleEl.textContent = `${document.getElementById('labelP1').textContent} WINS`;
+        badgeEl.textContent = 'Winner';
+      } else if (p2 > p1) {
+        titleEl.textContent = `${document.getElementById('labelP2').textContent} WINS`;
+        badgeEl.textContent = 'Winner';
+      } else {
+        titleEl.textContent = 'DRAW';
+        badgeEl.textContent = 'Tied';
+      }
+
+      document.getElementById('btnPlayAgain').textContent = state.online.isRanked ? 'Find Next Match' : 'Play Again';
+      document.getElementById('modalVictory').classList.remove('hidden');
+    }
+
+    function syncSetupModalUI() {
+      document.querySelectorAll('.mode-btn').forEach(btn => {
+        const active = btn.dataset.mode === state.mode;
+        btn.style.borderColor = active ? 'var(--text-primary)' : '';
+        btn.style.backgroundColor = active ? 'var(--bg-elevated)' : '';
+      });
+
+      document.querySelectorAll('.preset-btn').forEach(btn => {
+        const active = btn.dataset.preset === state.preset;
+        btn.style.borderColor = active ? 'var(--text-primary)' : '';
+        btn.style.backgroundColor = active ? 'var(--bg-elevated)' : '';
+      });
+
+      const rankedSection = document.getElementById('rankedSetupSection');
+      const onlineSection = document.getElementById('onlineSetupSection');
+      const arenaWrapper = document.getElementById('arenaConfigWrapper');
+      const applyBtn = document.getElementById('btnApplySetup');
+
+      rankedSection.classList.add('hidden');
+      onlineSection.classList.add('hidden');
+      arenaWrapper.classList.remove('hidden');
+
+      if (state.mode === 'ranked') {
+        rankedSection.classList.remove('hidden');
+        arenaWrapper.classList.add('hidden'); // Standardized competitive arena
+        applyBtn.textContent = 'Find Ranked Match';
+        updateEloUI();
+      } else if (state.mode === 'online') {
+        onlineSection.classList.remove('hidden');
+        applyBtn.textContent = 'Create Private Room';
+      } else {
+        applyBtn.textContent = 'Launch Constellation';
+      }
+
+      const seedRow = document.getElementById('seedControlRow');
+      if (state.preset === 'random') {
+        seedRow.classList.remove('hidden');
+        document.getElementById('inputSeed').value = state.seed;
+      } else {
+        seedRow.classList.add('hidden');
+      }
+
+      document.getElementById('sliderNodes').value = state.nodeCount;
+      document.getElementById('sliderNodeVal').textContent = state.nodeCount;
+    }
+
+    function startNewGame() {
+      if (state.mode === 'ranked') {
+        startRankedMatchmaking();
+        return;
+      }
+      if (state.mode === 'online') {
+        createOnlineRoom();
+        return;
+      }
+
+      if (roomUnsubscribe) {
+        roomUnsubscribe();
+        roomUnsubscribe = null;
+      }
+
+      state.online.isRanked = false;
+      state.nodes = generateConstellation(state.preset, state.nodeCount, state.seed);
+      state.edges = [];
+      state.triangles = [];
+      state.scores = { 1: 0, 2: 0 };
+      state.currentPlayer = 1;
+      state.turnNumber = 1;
+      state.colorsSwapped = false;
+      state.gameOver = false;
+      state.selectedNode = null;
+      state.hoverNode = null;
+      state.hintEdge = null;
+      state.history = [];
+      state.aiThinking = false;
+
+      document.getElementById('modalVictory').classList.add('hidden');
+      updateHUD();
+    }
+
+    // =========================================================================
+    // 9. EVENT LISTENERS & BOOTSTRAP
+    // =========================================================================
+    document.getElementById('btnTheme').addEventListener('click', toggleTheme);
+
+    document.getElementById('btnSound').addEventListener('click', () => {
+      SoundFX.enabled = !SoundFX.enabled;
+      document.getElementById('btnSound').textContent = SoundFX.enabled ? 'Audio: On' : 'Audio: Off';
+      if (SoundFX.enabled) SoundFX.playSelect();
+    });
+
+    // Rules Modal
+    document.getElementById('btnRules').addEventListener('click', () => {
+      document.getElementById('modalRules').classList.remove('hidden');
+    });
+    document.getElementById('closeRules').addEventListener('click', () => {
+      document.getElementById('modalRules').classList.add('hidden');
+    });
+    document.getElementById('btnRulesGotIt').addEventListener('click', () => {
+      document.getElementById('modalRules').classList.add('hidden');
+    });
+
+    // Setup Modal
+    document.getElementById('btnSetup').addEventListener('click', () => {
+      syncSetupModalUI();
+      document.getElementById('modalSetup').classList.remove('hidden');
+    });
+    document.getElementById('closeSetup').addEventListener('click', () => {
+      document.getElementById('modalSetup').classList.add('hidden');
+    });
+
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.mode = btn.dataset.mode;
+        syncSetupModalUI();
+      });
+    });
+
+    document.getElementById('btnJoinRoom').addEventListener('click', () => {
+      const code = document.getElementById('inputJoinCode').value;
+      joinOnlineRoom(code);
+    });
+
+    document.getElementById('btnCancelQueue').addEventListener('click', () => {
+      cancelRankedMatchmaking(false);
+    });
+
+    document.getElementById('btnCopyRoomCode').addEventListener('click', () => {
+      if (!state.online.roomCode) return;
+      const tempInput = document.createElement('input');
+      tempInput.value = state.online.roomCode;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+      showToast(`Copied room code: ${state.online.roomCode}`);
+    });
+
+    document.getElementById('btnLeaveRoom').addEventListener('click', leaveOnlineRoom);
+
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.preset = btn.dataset.preset;
+        syncSetupModalUI();
+      });
+    });
+
+    document.getElementById('sliderNodes').addEventListener('input', (e) => {
+      state.nodeCount = parseInt(e.target.value, 10);
+      document.getElementById('sliderNodeVal').textContent = state.nodeCount;
+    });
+
+    document.getElementById('btnRollSeed').addEventListener('click', () => {
+      const prefixes = ['ORION', 'LYRA', 'VEGA', 'DRACO', 'CYGNUS', 'APEX', 'PRISM'];
+      state.seed = `${prefixes[Math.floor(Math.random() * prefixes.length)]}-${Math.floor(10 + Math.random() * 90)}`;
+      document.getElementById('inputSeed').value = state.seed;
+    });
+
+    document.getElementById('btnApplySetup').addEventListener('click', () => {
+      const customSeed = document.getElementById('inputSeed').value.trim();
+      if (customSeed) state.seed = customSeed.toUpperCase();
+      if (state.mode !== 'ranked') {
+        document.getElementById('modalSetup').classList.add('hidden');
+      }
+      startNewGame();
+    });
+
+    // Bottom & In-Game Controls
+    document.getElementById('btnUndo').addEventListener('click', undoMove);
+
+    document.getElementById('btnHint').addEventListener('click', () => {
+      if (state.gameOver || state.aiThinking || isOnlineMatch()) return;
+      const best = computeBestHint();
+      if (best) {
+        state.hintEdge = best;
+        state.selectedNode = best[0];
+        SoundFX.playSelect();
+        showToast('Suggested move highlighted');
+      }
+    });
+
+    document.getElementById('btnPieSwap').addEventListener('click', applyPieRuleSwap);
+
+    document.getElementById('btnNewGame').addEventListener('click', () => {
+      if (state.preset === 'random') {
+        const prefixes = ['ORION', 'LYRA', 'VEGA', 'DRACO', 'CYGNUS', 'APEX', 'PRISM'];
+        state.seed = `${prefixes[Math.floor(Math.random() * prefixes.length)]}-${Math.floor(10 + Math.random() * 90)}`;
+      }
+      startNewGame();
+      showToast('Fresh constellation generated');
+    });
+
+    // Victory Modal Controls
+    document.getElementById('btnCloseVictory').addEventListener('click', () => {
+      document.getElementById('modalVictory').classList.add('hidden');
+    });
+
+    document.getElementById('btnPlayAgain').addEventListener('click', () => {
+      if (isOnlineMatch()) {
+        voteOnlineRematch();
+      } else {
+        startNewGame();
+      }
+    });
+
+    // Boot Application on Window Load
+    window.addEventListener('load', () => {
+      resizeCanvas();
+      startNewGame();
+      requestAnimationFrame(renderLoop);
+    });
+  </script>
+</body>
+</html>
