@@ -1,0 +1,2197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>CONSTELLATIONS — Custom Variants</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-page: #0a0a0a;
+      --bg-surface: #111111;
+      --bg-elevated: #181818;
+      --border-hairline: #242424;
+      --border-strong: #404040;
+      --text-primary: #f5f5f5;
+      --text-secondary: #8a8a8a;
+      --text-muted: #555555;
+    }
+
+    html.light {
+      --bg-page: #f7f7f5;
+      --bg-surface: #ffffff;
+      --bg-elevated: #efefec;
+      --border-hairline: #e2e2de;
+      --border-strong: #b8b8b2;
+      --text-primary: #111111;
+      --text-secondary: #666662;
+      --text-muted: #999994;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-page);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow-x: hidden;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .font-mono-tech {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .surface-panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-hairline);
+    }
+
+    .surface-elevated {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-hairline);
+    }
+
+    .text-main { color: var(--text-primary); }
+    .text-sub { color: var(--text-secondary); }
+    .text-dim { color: var(--text-muted); }
+
+    .btn-flat {
+      transition: background-color 0.1s ease, border-color 0.1s ease;
+      border: 1px solid var(--border-hairline);
+      background: var(--bg-surface);
+      color: var(--text-primary);
+    }
+
+    .btn-flat:hover:not(:disabled) {
+      border-color: var(--border-strong);
+      background: var(--bg-elevated);
+    }
+
+    .btn-flat:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .btn-solid {
+      background: var(--text-primary);
+      border: 1px solid var(--text-primary);
+      color: var(--bg-page);
+      font-weight: 500;
+    }
+
+    .btn-solid:hover:not(:disabled) {
+      opacity: 0.88;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: var(--border-hairline);
+      height: 2px;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--text-primary);
+      cursor: pointer;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      cursor: crosshair;
+    }
+
+    .modal-backdrop {
+      background: rgba(0, 0, 0, 0.65);
+    }
+    html.light .modal-backdrop {
+      background: rgba(247, 247, 245, 0.82);
+    }
+  </style>
+</head>
+<body class="select-none">
+
+  <!-- Minimal Top Bar -->
+  <header class="w-full max-w-5xl mx-auto px-4 pt-4 pb-3 flex flex-col gap-2.5 z-10">
+    <div class="flex items-center justify-between gap-2">
+      <div class="flex items-center gap-2.5">
+        <a href="index.html" class="font-mono-tech text-[11px] text-sub hover:text-main border border-[var(--border-hairline)] px-2 py-0.5 rounded">
+          ← Standard
+        </a>
+        <span class="font-mono-tech text-xs font-semibold tracking-[0.2em] uppercase text-main">
+          CUSTOM LAB
+        </span>
+      </div>
+
+      <div class="flex items-center gap-1.5">
+        <button id="btnVariantInfo" class="btn-flat px-2.5 py-1 rounded text-[11px] font-mono-tech text-sub hover:text-main">
+          Variant Rules
+        </button>
+        <button id="btnSetup" class="btn-flat px-2.5 py-1 rounded text-[11px] font-mono-tech text-main">
+          Modes &amp; Settings
+        </button>
+      </div>
+    </div>
+
+    <!-- Dynamic Multi-Player Score Strip (scales cleanly from 2 to 10 players) -->
+    <div id="scoreStrip" class="grid grid-cols-2 sm:grid-cols-5 gap-1.5 items-center">
+      <!-- Populated dynamically -->
+    </div>
+  </header>
+
+  <!-- Main Canvas Area -->
+  <main class="relative flex-1 w-full max-w-5xl mx-auto px-4 flex flex-col items-center justify-center min-h-[360px]">
+    <div id="canvasContainer" class="relative w-full h-full flex-1 min-h-[380px] max-h-[68dvh] rounded surface-panel overflow-hidden">
+      <canvas id="gameCanvas"></canvas>
+
+      <!-- Top-Left Variant Tag -->
+      <div class="absolute top-3 left-3 pointer-events-none flex flex-wrap items-center gap-1.5 text-[10px] text-dim font-mono-tech bg-[var(--bg-surface)]/85 px-2 py-0.5 rounded border border-[var(--border-hairline)]">
+        <span id="hudVariantName" class="text-main font-medium">Multiverse Arenas</span>
+        <span>/</span>
+        <span id="hudTurnBadge" class="text-sub">Turn: P1</span>
+        <span>/</span>
+        <span id="hudMovesLeft">-- moves</span>
+      </div>
+
+      <!-- Top-Right Special Action Banner (Shatter Toggle or Online Start) -->
+      <div id="variantActionBar" class="hidden absolute top-3 right-3 z-20 flex items-center gap-1.5">
+        <button id="btnShatterToggle" class="btn-flat px-2.5 py-1 rounded text-[10px] font-mono-tech">
+          Shatter: <span id="shatterChargesCount">2</span> left
+        </button>
+      </div>
+
+      <!-- Online Lobby Waiting Overlay Banner -->
+      <div id="onlineLobbyBanner" class="hidden absolute top-11 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 px-3 py-1.5 rounded surface-panel text-[11px] font-mono-tech">
+        <span id="lobbySeatCount" class="text-main">1/4 Players Joined</span>
+        <button id="btnStartOnlineMatch" class="btn-solid px-2.5 py-0.5 rounded text-[10px] font-mono-tech">
+          Start Now
+        </button>
+      </div>
+
+      <!-- Forced Misère Warning -->
+      <div id="forcedBanner" class="hidden absolute bottom-3 left-1/2 -translate-x-1/2 pointer-events-none px-3 py-1 rounded surface-elevated text-[11px] font-mono-tech text-main">
+        FORCED TRIANGLE — You must close a highlighted line
+      </div>
+
+      <!-- Minimal Toast -->
+      <div id="toastPill" class="hidden absolute bottom-3 left-1/2 -translate-x-1/2 z-20 px-3 py-1 rounded surface-elevated text-[11px] font-mono-tech text-main pointer-events-none whitespace-nowrap">
+      </div>
+    </div>
+  </main>
+
+  <!-- Minimal Bottom Controls -->
+  <footer class="w-full max-w-5xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-2 z-10">
+    <div class="flex items-center gap-1.5">
+      <button id="btnUndo" class="btn-flat px-3 py-1.5 rounded text-[11px] font-mono-tech text-sub hover:text-main">
+        Undo
+      </button>
+
+      <div id="onlineRoomPill" class="hidden items-center gap-2 px-2.5 py-1.5 rounded surface-panel text-[11px] font-mono-tech">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+        <span id="hudRoomCode" class="text-main tracking-wider">----</span>
+        <button id="btnCopyRoomCode" class="text-[10px] text-sub hover:text-main underline">
+          Copy
+        </button>
+      </div>
+
+      <span id="footerRuleHint" class="text-[11px] font-mono-tech text-dim hidden md:inline pl-2">
+        Play across parallel boards · Random color per player
+      </span>
+    </div>
+
+    <div class="flex items-center gap-1.5">
+      <button id="btnLeaveRoom" class="hidden btn-flat px-3 py-1.5 rounded text-[11px] font-mono-tech text-amber-500">
+        Leave Room
+      </button>
+      <button id="btnNewGame" class="btn-solid px-3.5 py-1.5 rounded text-[11px] font-mono-tech">
+        New Constellation
+      </button>
+    </div>
+  </footer>
+
+  <!-- MODAL 1: Variant Rules -->
+  <div id="modalRules" class="hidden fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4 overflow-y-auto">
+    <div class="surface-panel max-w-md w-full rounded p-5 my-auto space-y-4">
+      <div class="flex items-center justify-between border-b border-[var(--border-hairline)] pb-3">
+        <div>
+          <h2 id="rulesModalTitle" class="font-mono-tech text-xs font-semibold uppercase tracking-widest text-main">Variant Rules</h2>
+          <p id="rulesModalTagline" class="text-[11px] text-dim mt-0.5">Custom rule modifier</p>
+        </div>
+        <button id="closeRules" class="text-sub hover:text-main text-xs font-mono-tech p-1">✕</button>
+      </div>
+
+      <div id="rulesModalBody" class="space-y-2.5 text-xs text-sub leading-relaxed">
+        <!-- Populated dynamically per variant -->
+      </div>
+
+      <button id="btnRulesGotIt" class="w-full btn-solid py-2 rounded text-xs font-mono-tech">
+        Got It
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL 2: Custom Variants, Online Rooms & Settings -->
+  <div id="modalSetup" class="hidden fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4 overflow-y-auto">
+    <div class="surface-panel max-w-md w-full rounded p-5 my-auto space-y-4">
+      <div class="flex items-center justify-between border-b border-[var(--border-hairline)] pb-3">
+        <h2 class="font-mono-tech text-xs font-semibold uppercase tracking-widest text-main">Custom Lab &amp; Multiplayer</h2>
+        <button id="closeSetup" class="text-sub hover:text-main text-xs font-mono-tech p-1">✕</button>
+      </div>
+
+      <!-- 1. Select Custom Variant -->
+      <div class="space-y-2">
+        <label class="block font-mono-tech text-[10px] uppercase tracking-wider text-dim">1. Choose Variant</label>
+        <div class="grid grid-cols-1 gap-1.5" id="variantSelector">
+          <button data-variant="multiverse" class="variant-btn btn-flat p-2.5 rounded text-left flex items-center justify-between">
+            <div>
+              <div class="font-mono-tech text-xs font-medium text-main">Multiverse Arenas (⌊N/2⌋ Boards)</div>
+              <div class="text-[11px] text-sub">Up to 10 players with random colors battling simultaneously across parallel boards!</div>
+            </div>
+            <span class="font-mono-tech text-[10px] text-dim">4–10P</span>
+          </button>
+
+          <button data-variant="ffa3" class="variant-btn btn-flat p-2.5 rounded text-left flex items-center justify-between">
+            <div>
+              <div class="font-mono-tech text-xs font-medium text-main">3-Player Chaos (FFA)</div>
+              <div class="text-[11px] text-sub">Three players weave on one shared 22-node web; steal setups &amp; chain turns.</div>
+            </div>
+            <span class="font-mono-tech text-[10px] text-dim">3P</span>
+          </button>
+
+          <button data-variant="shatter" class="variant-btn btn-flat p-2.5 rounded text-left flex items-center justify-between">
+            <div>
+              <div class="font-mono-tech text-xs font-medium text-main">Shatter (Edge Breaker)</div>
+              <div class="text-[11px] text-sub">Each player gets 2 Shatter charges to snap an opponent's line &amp; unclaim triangles.</div>
+            </div>
+            <span class="font-mono-tech text-[10px] text-dim">2P</span>
+          </button>
+
+          <button data-variant="misere" class="variant-btn btn-flat p-2.5 rounded text-left flex items-center justify-between">
+            <div>
+              <div class="font-mono-tech text-xs font-medium text-main">Misère (Avoid Triangles)</div>
+              <div class="text-[11px] text-sub">Closing a triangle is FORCED if possible — and lowest score wins!</div>
+            </div>
+            <span class="font-mono-tech text-[10px] text-dim">2P</span>
+          </button>
+
+          <button data-variant="gravity" class="variant-btn btn-flat p-2.5 rounded text-left flex items-center justify-between">
+            <div>
+              <div class="font-mono-tech text-xs font-medium text-main">Singularity (3× Core)</div>
+              <div class="text-[11px] text-sub">Any triangle touching the central Black Hole dot is worth 3 points.</div>
+            </div>
+            <span class="font-mono-tech text-[10px] text-dim">2P</span>
+          </button>
+
+          <button data-variant="eclipse" class="variant-btn btn-flat p-2.5 rounded text-left flex items-center justify-between">
+            <div>
+              <div class="font-mono-tech text-xs font-medium text-main">Eclipse (Fog of War)</div>
+              <div class="text-[11px] text-sub">Opponent lines vanish into fog unless connected to your own network.</div>
+            </div>
+            <span class="font-mono-tech text-[10px] text-dim">2P</span>
+          </button>
+        </div>
+
+        <!-- Multiverse Player Count Slider (4 to 10 players -> 2 to 5 parallel boards) -->
+        <div id="multiverseConfigRow" class="surface-elevated rounded px-3 py-2">
+          <div class="flex justify-between items-center mb-1.5">
+            <span class="font-mono-tech text-[10px] uppercase tracking-wider text-dim">Players &amp; Parallel Boards</span>
+            <span id="sliderMultiverseVal" class="font-mono-tech text-[11px] text-main">4 Players · 2 Boards</span>
+          </div>
+          <input id="sliderMultiversePlayers" type="range" min="4" max="10" step="1" value="4" class="w-full" />
+        </div>
+      </div>
+
+      <!-- 2. Play Mode (Online Room vs AI Bots vs Local Pass & Play) -->
+      <div class="space-y-2 pt-2 border-t border-[var(--border-hairline)]">
+        <label class="block font-mono-tech text-[10px] uppercase tracking-wider text-dim">2. Play Mode</label>
+        <div class="grid grid-cols-3 gap-1.5" id="opponentSelector">
+          <button data-opp="online" class="opp-btn btn-flat py-1.5 px-2 rounded text-[11px] font-mono-tech text-center">Online Room</button>
+          <button data-opp="ai" class="opp-btn btn-flat py-1.5 px-2 rounded text-[11px] font-mono-tech text-center">vs AI Bots</button>
+          <button data-opp="local" class="opp-btn btn-flat py-1.5 px-2 rounded text-[11px] font-mono-tech text-center">Local 1-Screen</button>
+        </div>
+
+        <!-- Online Room Join / Host Panel -->
+        <div id="onlineCustomPanel" class="hidden p-3 rounded surface-elevated space-y-2">
+          <div class="flex items-center justify-between text-[11px] font-mono-tech">
+            <span class="text-main">Multi-Seat Online Room (up to 10P)</span>
+            <span id="customAuthStatus" class="text-dim">Connecting...</span>
+          </div>
+          <div class="flex gap-1.5">
+            <input id="inputJoinCustomCode" type="text" maxlength="6" placeholder="ROOM CODE" class="flex-1 surface-panel rounded px-2.5 py-1.5 text-xs font-mono-tech uppercase tracking-widest text-main focus:outline-none" />
+            <button id="btnJoinCustomRoom" type="button" class="btn-flat px-3 py-1.5 rounded text-xs font-mono-tech text-main">
+              Join Room
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Preferences -->
+      <div class="space-y-2 pt-2 border-t border-[var(--border-hairline)]">
+        <label class="block font-mono-tech text-[10px] uppercase tracking-wider text-dim">3. Preferences</label>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="btnTheme" type="button" class="btn-flat px-3 py-2 rounded text-[11px] font-mono-tech flex items-center justify-between">
+            <span class="text-sub">Theme</span>
+            <span id="themeValueLabel" class="text-main">Dark</span>
+          </button>
+
+          <button id="btnSound" type="button" class="btn-flat px-3 py-2 rounded text-[11px] font-mono-tech flex items-center justify-between">
+            <span class="text-sub">Audio</span>
+            <span id="soundValueLabel" class="text-main">On</span>
+          </button>
+        </div>
+      </div>
+
+      <button id="btnApplySetup" class="w-full btn-solid py-2.5 rounded text-xs font-mono-tech">
+        Launch Variant
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL 3: Victory Summary -->
+  <div id="modalVictory" class="hidden fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4">
+    <div class="surface-panel max-w-sm w-full rounded p-5 text-center space-y-4">
+      <div>
+        <div id="victoryBadge" class="font-mono-tech text-[10px] uppercase tracking-widest text-dim mb-1">
+          Complete
+        </div>
+        <h2 id="victoryTitle" class="font-mono-tech text-base font-semibold text-main">PLAYER 1 WINS</h2>
+        <p id="victorySubtitle" class="text-[11px] text-sub mt-0.5">No valid lines remain.</p>
+      </div>
+
+      <div id="victoryScoreGrid" class="grid grid-cols-2 gap-2 max-h-56 overflow-y-auto">
+        <!-- Populated dynamically -->
+      </div>
+
+      <div class="flex gap-2">
+        <button id="btnCloseVictory" class="flex-1 btn-flat py-2 rounded text-xs font-mono-tech text-sub">
+          Board
+        </button>
+        <button id="btnPlayAgain" class="flex-1 btn-solid py-2 rounded text-xs font-mono-tech">
+          Play Again
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // =========================================================================
+    // 0. FIREBASE INITIALIZATION (Shared with Standard Constellations)
+    // =========================================================================
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'vertex-weave-app';
+    const firebaseConfig = typeof __firebase_config !== 'undefined'
+      ? JSON.parse(__firebase_config)
+      : {
+          apiKey: "AIzaSyA_3encAGiBAfI09HqSNtJrHnQAxbPfNPA",
+          authDomain: "vertex-weave.firebaseapp.com",
+          projectId: "vertex-weave",
+          storageBucket: "vertex-weave.firebasestorage.app",
+          messagingSenderId: "595966290028",
+          appId: "1:595966290028:web:a7eeb849428be96ac35049",
+          measurementId: "G-X6SFLRX8GV"
+        };
+
+    let app = null;
+    let db = null;
+    let auth = null;
+    let currentUser = null;
+    let roomUnsubscribe = null;
+
+    async function initFirebase() {
+      try {
+        app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+        onAuthStateChanged(auth, (user) => {
+          currentUser = user;
+          if (user) {
+            document.getElementById('customAuthStatus').textContent = 'Ready';
+          }
+        });
+      } catch (err) {
+        console.error('Firebase init error:', err);
+        document.getElementById('customAuthStatus').textContent = 'Offline';
+      }
+    }
+    initFirebase();
+
+    // =========================================================================
+    // 1. VARIANT DEFINITIONS & RANDOMIZED DISTINCT PLAYER PALETTE (UP TO 10P)
+    // =========================================================================
+    const DISTINCT_COLOR_POOL = [
+      { name: 'Amber',   hex: '#d97706', fill: 'rgba(217, 119, 6, 0.16)' },
+      { name: 'Teal',    hex: '#14b8a6', fill: 'rgba(20, 184, 166, 0.16)' },
+      { name: 'Violet',  hex: '#a78bfa', fill: 'rgba(167, 139, 250, 0.16)' },
+      { name: 'Rose',    hex: '#f43f5e', fill: 'rgba(244, 63, 94, 0.16)' },
+      { name: 'Sky',     hex: '#38bdf8', fill: 'rgba(56, 189, 248, 0.16)' },
+      { name: 'Emerald', hex: '#10b981', fill: 'rgba(16, 185, 129, 0.16)' },
+      { name: 'Fuchsia', hex: '#e879f9', fill: 'rgba(232, 121, 249, 0.16)' },
+      { name: 'Lime',    hex: '#84cc16', fill: 'rgba(132, 204, 22, 0.16)' },
+      { name: 'Orange',  hex: '#fb923c', fill: 'rgba(251, 146, 60, 0.16)' },
+      { name: 'Indigo',  hex: '#818cf8', fill: 'rgba(129, 140, 248, 0.16)' }
+    ];
+
+    function generateShuffledPlayerColors(count) {
+      const pool = [...DISTINCT_COLOR_POOL];
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+      const assigned = {};
+      for (let p = 1; p <= count; p++) {
+        assigned[p] = pool[(p - 1) % pool.length];
+      }
+      return assigned;
+    }
+
+    const VARIANTS = {
+      multiverse: {
+        name: 'Multiverse Arenas',
+        defaultPlayers: 4,
+        nodeCount: 14,
+        preset: 'hexaring',
+        hint: 'Play on ANY parallel board · Random color assigned per player',
+        tagline: 'N players battle simultaneously across ⌊N/2⌋ independent constellations.',
+        rules: [
+          '<strong>⌊N / 2⌋ Parallel Boards:</strong> With 4 players you get 2 boards; with 6 players, 3 boards; up to 10 players across 5 boards!',
+          '<strong>Play Anywhere:</strong> On your turn, you can weave a line on <em>any</em> open board in the multiverse.',
+          '<strong>Cross-Board Bonus Chains:</strong> Closing an empty triangle on Board A gives you a bonus turn that you can spend on Board B or C!',
+          '<strong>Randomized Colors:</strong> Every player is assigned a random distinct color at match start.'
+        ]
+      },
+      ffa3: {
+        name: '3-Player Chaos',
+        defaultPlayers: 3,
+        nodeCount: 22,
+        preset: 'hexaring',
+        hint: '3-way planar battle · Highest score wins',
+        tagline: 'Three players weave simultaneously on one shared constellation.',
+        rules: [
+          '<strong>3 Players (P1, P2, P3):</strong> Turns rotate 1 → 2 → 3.',
+          '<strong>Triangle Poaching:</strong> If P1 and P2 build two sides of a triangle, P3 can close the third side to steal the point and earn a bonus turn.',
+          '<strong>Winning:</strong> Most claimed triangles when the board locks wins.'
+        ]
+      },
+      shatter: {
+        name: 'Shatter (Edge Breaker)',
+        defaultPlayers: 2,
+        nodeCount: 19,
+        preset: 'hexaring',
+        hint: 'Click Shatter to snap an opponent line · 2 charges each',
+        tagline: 'Break enemy lines to reopen closed territory.',
+        rules: [
+          '<strong>2 Shatter Charges:</strong> Instead of drawing a line on your turn, toggle <em>Shatter</em> and click any opponent edge to destroy it.',
+          '<strong>Cascading Unclaim:</strong> Any triangle that relied on the shattered edge immediately breaks apart and subtracts points from its owner.',
+          '<strong>Note:</strong> Shattering consumes your turn and does not grant a bonus move.'
+        ]
+      },
+      misere: {
+        name: 'Misère (Avoid Triangles)',
+        defaultPlayers: 2,
+        nodeCount: 16,
+        preset: 'starburst',
+        hint: 'Lowest score wins · Closing a triangle is FORCED if available',
+        tagline: 'Reverse psychology: force your opponent to close triangles.',
+        rules: [
+          '<strong>Lowest Score Wins:</strong> Every triangle you close adds +1 penalty point to your score.',
+          '<strong>Forced Capture Rule:</strong> If there is any valid line on the board that closes an empty triangle, you <em>must</em> play one of those lines.',
+          '<strong>No Bonus Turns:</strong> Turns always alternate so you cannot chain-dump triangles.'
+        ]
+      },
+      gravity: {
+        name: 'Singularity (3× Core)',
+        defaultPlayers: 2,
+        nodeCount: 19,
+        preset: 'hexaring',
+        hint: 'Center Black Hole triangles = 3 pts · Outer triangles = 1 pt',
+        tagline: 'Fight for control of the high-gravity center vertex.',
+        rules: [
+          '<strong>3× Singularity Core:</strong> The center dot (marked with a double ring) exerts gravitational pull.',
+          '<strong>Triple Points:</strong> Any empty triangle that uses the center dot as one of its 3 corners is worth <strong>3 points</strong> instead of 1.',
+          '<strong>Standard Chain Turns:</strong> Closing any triangle still grants an immediate bonus turn.'
+        ]
+      },
+      eclipse: {
+        name: 'Eclipse (Fog of War)',
+        defaultPlayers: 2,
+        nodeCount: 19,
+        preset: 'random',
+        hint: 'Opponent lines stay hidden unless touching your own lines',
+        tagline: 'Deduce hidden enemy lines by probing the constellation.',
+        rules: [
+          '<strong>Hidden Enemy Lines:</strong> Opponent lines are invisible unless they share a dot with one of your own lines or form a claimed triangle.',
+          '<strong>Collision Reveal:</strong> If you attempt to draw a line that crosses a hidden opponent line, the hidden line is revealed in fog and your turn passes!',
+          '<strong>Memory & Deduction:</strong> Track where enemy lines must be hiding.'
+        ]
+      }
+    };
+
+    // =========================================================================
+    // 2. THEME & SUBTLE AUDIO ENGINE
+    // =========================================================================
+    let isLightTheme = false;
+
+    function getNeutralPalette() {
+      if (isLightTheme) {
+        return {
+          nodeFill: '#111111',
+          nodeStroke: '#ffffff',
+          nodeAnchoredFill: '#e2e2de',
+          nodeAnchoredStroke: '#999994',
+          guideNormal: 'rgba(17, 17, 17, 0.12)',
+          guideForced: 'rgba(194, 65, 12, 0.55)',
+          invalidStroke: '#dc2626',
+          boardDivider: 'rgba(17, 17, 17, 0.12)',
+          boardLabel: 'rgba(17, 17, 17, 0.45)'
+        };
+      }
+      return {
+        nodeFill: '#f5f5f5',
+        nodeStroke: '#111111',
+        nodeAnchoredFill: '#242424',
+        nodeAnchoredStroke: '#555555',
+        guideNormal: 'rgba(245, 245, 245, 0.10)',
+        guideForced: 'rgba(217, 119, 6, 0.55)',
+        invalidStroke: '#ef4444',
+        boardDivider: 'rgba(245, 245, 245, 0.10)',
+        boardLabel: 'rgba(245, 245, 245, 0.35)'
+      };
+    }
+
+    function toggleTheme() {
+      isLightTheme = !isLightTheme;
+      document.documentElement.classList.toggle('light', isLightTheme);
+      document.getElementById('themeValueLabel').textContent = isLightTheme ? 'Light' : 'Dark';
+      updateHUD();
+    }
+
+    const SoundFX = {
+      enabled: true,
+      initialized: false,
+      synth: null,
+
+      async init() {
+        if (this.initialized) return;
+        try {
+          await Tone.start();
+          this.synth = new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: 'sine' },
+            envelope: { attack: 0.015, decay: 0.09, sustain: 0.0, release: 0.14 }
+          }).toDestination();
+          this.synth.volume.value = -21;
+          this.initialized = true;
+        } catch (e) {}
+      },
+
+      playSelect() {
+        if (!this.enabled) return;
+        this.init().then(() => this.synth && this.synth.triggerAttackRelease('E5', '64n'));
+      },
+
+      playEdge(player) {
+        if (!this.enabled) return;
+        const notes = ['A4', 'B4', 'C#5', 'D5', 'E5', 'F#5'];
+        this.init().then(() => this.synth && this.synth.triggerAttackRelease(notes[(player - 1) % notes.length], '32n'));
+      },
+
+      playTriangle() {
+        if (!this.enabled) return;
+        this.init().then(() => {
+          if (!this.synth) return;
+          const now = Tone.now();
+          this.synth.triggerAttackRelease('C5', '32n', now);
+          this.synth.triggerAttackRelease('G5', '16n', now + 0.05);
+        });
+      },
+
+      playShatter() {
+        if (!this.enabled) return;
+        this.init().then(() => {
+          if (!this.synth) return;
+          const now = Tone.now();
+          this.synth.triggerAttackRelease('G4', '32n', now);
+          this.synth.triggerAttackRelease('C4', '16n', now + 0.04);
+        });
+      },
+
+      playInvalid() {
+        if (!this.enabled) return;
+        this.init().then(() => this.synth && this.synth.triggerAttackRelease('D3', '64n'));
+      }
+    };
+
+    // =========================================================================
+    // 3. GEOMETRY KERNEL & CONSTELLATION GENERATOR
+    // =========================================================================
+    const EPS = 1e-7;
+
+    function orientation(p, q, r) {
+      const val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
+      if (Math.abs(val) < EPS) return 0;
+      return val > 0 ? 1 : 2;
+    }
+
+    function onSegment(p, q, r) {
+      return (
+        q.x <= Math.max(p.x, r.x) + EPS &&
+        q.x >= Math.min(p.x, r.x) - EPS &&
+        q.y <= Math.max(p.y, r.y) + EPS &&
+        q.y >= Math.min(p.y, r.y) - EPS
+      );
+    }
+
+    function segmentsCross(a1, a2, b1, b2, idxA1, idxA2, idxB1, idxB2) {
+      const sharesEndpoint =
+        idxA1 === idxB1 || idxA1 === idxB2 || idxA2 === idxB1 || idxA2 === idxB2;
+
+      if (sharesEndpoint) {
+        const o1 = orientation(a1, a2, b1);
+        const o2 = orientation(a1, a2, b2);
+        if (o1 === 0 && o2 === 0) {
+          if (idxA1 === idxB1 && (onSegment(a1, b2, a2) || onSegment(b1, a2, b2))) return true;
+          if (idxA1 === idxB2 && (onSegment(a1, b1, a2) || onSegment(b2, a2, b1))) return true;
+          if (idxA2 === idxB1 && (onSegment(a2, b2, a1) || onSegment(b1, a1, b2))) return true;
+          if (idxA2 === idxB2 && (onSegment(a2, b1, a1) || onSegment(b2, a1, b1))) return true;
+        }
+        return false;
+      }
+
+      const o1 = orientation(a1, a2, b1);
+      const o2 = orientation(a1, a2, b2);
+      const o3 = orientation(b1, b2, a1);
+      const o4 = orientation(b1, b2, a2);
+
+      if (o1 !== o2 && o3 !== o4) return true;
+      if (o1 === 0 && onSegment(a1, b1, a2)) return true;
+      if (o2 === 0 && onSegment(a1, b2, a2)) return true;
+      if (o3 === 0 && onSegment(b1, a1, b2)) return true;
+      if (o4 === 0 && onSegment(b1, a2, b2)) return true;
+      return false;
+    }
+
+    function pointInTriangle(p, a, b, c) {
+      const areaOrig = Math.abs((b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y));
+      if (areaOrig < EPS) return true;
+      const area1 = Math.abs((a.x - p.x) * (b.y - p.y) - (b.x - p.x) * (a.y - p.y));
+      const area2 = Math.abs((b.x - p.x) * (c.y - p.y) - (c.x - p.x) * (b.y - p.y));
+      const area3 = Math.abs((c.x - p.x) * (a.y - p.y) - (a.x - p.x) * (c.y - p.y));
+      return Math.abs(area1 + area2 + area3 - areaOrig) < 1e-5;
+    }
+
+    function segmentPassesThroughNode(nodes, i, j) {
+      const a = nodes[i];
+      const b = nodes[j];
+      for (let k = 0; k < nodes.length; k++) {
+        if (k === i || k === j) continue;
+        const p = nodes[k];
+        if (orientation(a, b, p) === 0 && onSegment(a, p, b)) return true;
+      }
+      return false;
+    }
+
+    function generateConstellation(preset, count) {
+      const nodes = [];
+      const cx = 0.5;
+      const cy = 0.5;
+
+      if (preset === 'hexaring') {
+        nodes.push({ id: 0, x: cx, y: cy, anchored: false });
+        const remaining = count - 1;
+        const innerCount = Math.min(6, Math.floor(remaining * 0.38));
+        const outerCount = remaining - innerCount;
+
+        for (let i = 0; i < innerCount; i++) {
+          const angle = (i / innerCount) * Math.PI * 2 - Math.PI / 2;
+          nodes.push({
+            id: nodes.length,
+            x: cx + Math.cos(angle) * 0.21,
+            y: cy + Math.sin(angle) * 0.21,
+            anchored: false
+          });
+        }
+        for (let i = 0; i < outerCount; i++) {
+          const angle = (i / outerCount) * Math.PI * 2 - Math.PI / 2 + Math.PI / outerCount;
+          nodes.push({
+            id: nodes.length,
+            x: cx + Math.cos(angle) * 0.42,
+            y: cy + Math.sin(angle) * 0.42,
+            anchored: false
+          });
+        }
+      } else if (preset === 'starburst') {
+        const arms = 5;
+        nodes.push({ id: 0, x: cx, y: cy, anchored: false });
+        let idx = 1;
+        let ring = 1;
+        while (idx < count) {
+          const ptsInRing = Math.min(arms * (ring === 1 ? 1 : 2), count - idx);
+          const radius = ring === 1 ? 0.18 : 0.38;
+          const offset = ring % 2 === 0 ? Math.PI / ptsInRing : -Math.PI / 2;
+          for (let i = 0; i < ptsInRing; i++) {
+            const angle = offset + (i / ptsInRing) * Math.PI * 2;
+            const rMod = ring >= 2 && i % 2 === 1 ? radius * 0.85 : radius;
+            nodes.push({
+              id: idx++,
+              x: cx + Math.cos(angle) * rMod,
+              y: cy + Math.sin(angle) * rMod,
+              anchored: false
+            });
+          }
+          ring++;
+        }
+      } else {
+        const minDist = Math.max(0.11, 0.56 / Math.sqrt(count));
+        let attempts = 0;
+        while (nodes.length < count && attempts < 6000) {
+          attempts++;
+          const cand = {
+            id: nodes.length,
+            x: 0.1 + Math.random() * 0.8,
+            y: 0.12 + Math.random() * 0.76,
+            anchored: false
+          };
+          let ok = true;
+          for (let i = 0; i < nodes.length; i++) {
+            if (Math.hypot(nodes[i].x - cand.x, nodes[i].y - cand.y) < minDist) {
+              ok = false;
+              break;
+            }
+          }
+          if (!ok) continue;
+          for (let i = 0; i < nodes.length && ok; i++) {
+            for (let j = i + 1; j < nodes.length; j++) {
+              const area = Math.abs(
+                (nodes[j].x - nodes[i].x) * (cand.y - nodes[i].y) -
+                (cand.x - nodes[i].x) * (nodes[j].y - nodes[i].y)
+              );
+              if (area < 0.0035) {
+                ok = false;
+                break;
+              }
+            }
+          }
+          if (ok) nodes.push(cand);
+        }
+      }
+      return nodes;
+    }
+
+    // =========================================================================
+    // 4. MULTI-BOARD GAME STATE & CUSTOM VARIANT ENGINE
+    // =========================================================================
+    const state = {
+      variant: 'multiverse', // 'multiverse' | 'ffa3' | 'shatter' | 'misere' | 'gravity' | 'eclipse'
+      opponentMode: 'ai',    // 'online' | 'ai' | 'local'
+      multiversePlayers: 4,  // 4 to 10 players (boards = Math.floor(N / 2))
+      playerCount: 4,
+      playerColors: generateShuffledPlayerColors(4),
+
+      // Array of independent boards! Standard variants use 1 board; Multiverse uses floor(N/2) boards.
+      boards: [], // [{ id, nodes, edges, triangles }]
+
+      scores: {},
+      shatterCharges: { 1: 2, 2: 2 },
+      shatterModeActive: false,
+
+      currentPlayer: 1,
+      gameOver: false,
+      selectedNode: null, // { boardIdx, nodeIdx }
+      hoverNode: null,    // { boardIdx, nodeIdx }
+      hoverEdge: null,    // { boardIdx, edgeIdx }
+      pointerPos: null,
+      forcedMoves: [],    // [{ boardIdx, u, v }]
+      history: [],
+      aiThinking: false,
+
+      // Online Multi-Seat Room State (up to 10 players)
+      online: {
+        roomCode: null,
+        mySeat: null,         // 1..N
+        seats: {},            // { 1: uid, 2: uid, ... }
+        matchStarted: false
+      }
+    };
+
+    function isOnlineCustom() {
+      return state.opponentMode === 'online' && Boolean(state.online.roomCode);
+    }
+
+    function isValidMoveOnBoard(boardIdx, u, v) {
+      const b = state.boards[boardIdx];
+      if (!b || u === null || v === null || u === v) return false;
+      if (b.nodes[u].anchored || b.nodes[v].anchored) return false;
+      if (b.edges.some(e => (e.u === u && e.v === v) || (e.u === v && e.v === u))) return false;
+      if (segmentPassesThroughNode(b.nodes, u, v)) return false;
+
+      const a1 = b.nodes[u];
+      const a2 = b.nodes[v];
+      for (let i = 0; i < b.edges.length; i++) {
+        const e = b.edges[i];
+        if (segmentsCross(a1, a2, b.nodes[e.u], b.nodes[e.v], u, v, e.u, e.v)) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    function getAllValidMovesAllBoards() {
+      const valid = [];
+      for (let bIdx = 0; bIdx < state.boards.length; bIdx++) {
+        const b = state.boards[bIdx];
+        for (let i = 0; i < b.nodes.length; i++) {
+          if (b.nodes[i].anchored) continue;
+          for (let j = i + 1; j < b.nodes.length; j++) {
+            if (b.nodes[j].anchored) continue;
+            if (isValidMoveOnBoard(bIdx, i, j)) {
+              valid.push({ boardIdx: bIdx, u: i, v: j });
+            }
+          }
+        }
+      }
+      return valid;
+    }
+
+    function findNewEmptyTrianglesOnBoard(boardIdx, u, v) {
+      const b = state.boards[boardIdx];
+      const created = [];
+      for (let w = 0; w < b.nodes.length; w++) {
+        if (w === u || w === v) continue;
+        const hasUW = b.edges.some(e => (e.u === u && e.v === w) || (e.u === w && e.v === u));
+        const hasVW = b.edges.some(e => (e.u === v && e.v === w) || (e.u === w && e.v === v));
+        if (!hasUW || !hasVW) continue;
+
+        const sorted = [u, v, w].sort((a, b) => a - b);
+        const exists = b.triangles.some(t => t.a === sorted[0] && t.b === sorted[1] && t.c === sorted[2]);
+        if (exists) continue;
+
+        let containsNode = false;
+        for (let k = 0; k < b.nodes.length; k++) {
+          if (k === u || k === v || k === w) continue;
+          if (pointInTriangle(b.nodes[k], b.nodes[u], b.nodes[v], b.nodes[w])) {
+            containsNode = true;
+            break;
+          }
+        }
+
+        if (!containsNode) {
+          const touchesCore = sorted.includes(0);
+          const pts = (state.variant === 'gravity' && touchesCore) ? 3 : 1;
+          created.push({ a: sorted[0], b: sorted[1], c: sorted[2], points: pts });
+        }
+      }
+      return created;
+    }
+
+    function computeMisereForcedMoves() {
+      if (state.variant !== 'misere') {
+        state.forcedMoves = [];
+        return;
+      }
+      const all = getAllValidMovesAllBoards();
+      state.forcedMoves = all.filter(m => findNewEmptyTrianglesOnBoard(m.boardIdx, m.u, m.v).length > 0);
+    }
+
+    function recomputeScoresAndAnchors() {
+      for (let p = 1; p <= state.playerCount; p++) {
+        state.scores[p] = 0;
+      }
+
+      for (const b of state.boards) {
+        for (const t of b.triangles) {
+          state.scores[t.owner] = (state.scores[t.owner] || 0) + (t.points || 1);
+        }
+
+        b.nodes.forEach(n => (n.anchored = false));
+        for (let i = 0; i < b.nodes.length; i++) {
+          const incident = b.triangles.filter(t => t.a === i || t.b === i || t.c === i);
+          if (incident.length < 3) continue;
+
+          let totalAngle = 0;
+          const p = b.nodes[i];
+          for (const t of incident) {
+            const others = [t.a, t.b, t.c].filter(idx => idx !== i);
+            const p1 = b.nodes[others[0]];
+            const p2 = b.nodes[others[1]];
+            const v1x = p1.x - p.x;
+            const v1y = p1.y - p.y;
+            const v2x = p2.x - p.x;
+            const v2y = p2.y - p.y;
+            const dot = v1x * v2x + v1y * v2y;
+            const mag = Math.hypot(v1x, v1y) * Math.hypot(v2x, v2y);
+            if (mag > EPS) {
+              totalAngle += Math.acos(Math.max(-1, Math.min(1, dot / mag)));
+            }
+          }
+          if (Math.abs(totalAngle - Math.PI * 2) < 0.03) {
+            b.nodes[i].anchored = true;
+          }
+        }
+      }
+    }
+
+    function saveHistorySnapshot() {
+      state.history.push({
+        boards: state.boards.map(b => ({
+          id: b.id,
+          nodes: b.nodes.map(n => ({ ...n })),
+          edges: b.edges.map(e => ({ ...e })),
+          triangles: b.triangles.map(t => ({ ...t }))
+        })),
+        scores: { ...state.scores },
+        shatterCharges: { ...state.shatterCharges },
+        currentPlayer: state.currentPlayer,
+        gameOver: state.gameOver
+      });
+    }
+
+    function advanceTurn() {
+      state.currentPlayer = (state.currentPlayer % state.playerCount) + 1;
+    }
+
+    function executeMove(boardIdx, u, v) {
+      if (state.gameOver || state.shatterModeActive) return false;
+
+      if (isOnlineCustom()) {
+        if (!state.online.matchStarted) {
+          showToast('Click "Start Now" once friends join!');
+          return false;
+        }
+        if (state.currentPlayer !== state.online.mySeat) {
+          showToast(`Waiting for Player ${state.currentPlayer}...`);
+          return false;
+        }
+      }
+
+      const b = state.boards[boardIdx];
+      if (!b) return false;
+
+      // Eclipse (Fog of War) collision reveal check
+      if (state.variant === 'eclipse') {
+        const a1 = b.nodes[u];
+        const a2 = b.nodes[v];
+        const crossedHidden = b.edges.find(
+          e => e.owner !== state.currentPlayer &&
+               segmentsCross(a1, a2, b.nodes[e.u], b.nodes[e.v], u, v, e.u, e.v)
+        );
+        if (crossedHidden) {
+          saveHistorySnapshot();
+          crossedHidden.revealedInFog = true;
+          state.selectedNode = null;
+          SoundFX.playShatter();
+          showToast('Fog collision! Hidden enemy line revealed — turn lost.');
+          advanceTurn();
+          updateHUD();
+          if (isOnlineCustom()) syncOnlineCustomRoom();
+          else triggerAIIfNeeded();
+          return true;
+        }
+      }
+
+      if (!isValidMoveOnBoard(boardIdx, u, v)) {
+        SoundFX.playInvalid();
+        return false;
+      }
+
+      // Misère forced capture check
+      if (state.variant === 'misere' && state.forcedMoves.length > 0) {
+        const isForcedChoice = state.forcedMoves.some(
+          m => m.boardIdx === boardIdx && ((m.u === u && m.v === v) || (m.u === v && m.v === u))
+        );
+        if (!isForcedChoice) {
+          SoundFX.playInvalid();
+          showToast('Misère Rule: You must close a highlighted triangle!');
+          return false;
+        }
+      }
+
+      saveHistorySnapshot();
+      const player = state.currentPlayer;
+      b.edges.push({ u, v, owner: player, revealedInFog: false });
+
+      const newTris = findNewEmptyTrianglesOnBoard(boardIdx, u, v);
+      if (newTris.length > 0) {
+        newTris.forEach(t => {
+          b.triangles.push({ ...t, owner: player });
+        });
+        recomputeScoresAndAnchors();
+        SoundFX.playTriangle();
+        const ptsTotal = newTris.reduce((acc, t) => acc + t.points, 0);
+        if (state.variant === 'misere') {
+          showToast(`+${ptsTotal} penalty point${ptsTotal > 1 ? 's' : ''}!`);
+        } else {
+          showToast(`+${ptsTotal} point${ptsTotal > 1 ? 's' : ''} · Bonus turn!`);
+        }
+      } else {
+        SoundFX.playEdge(player);
+      }
+
+      state.selectedNode = null;
+      computeMisereForcedMoves();
+
+      if (getAllValidMovesAllBoards().length === 0) {
+        state.gameOver = true;
+        updateHUD();
+        if (isOnlineCustom()) syncOnlineCustomRoom();
+        setTimeout(showVictoryModal, 350);
+        return true;
+      }
+
+      if (newTris.length === 0 || state.variant === 'misere') {
+        advanceTurn();
+      }
+
+      updateHUD();
+      if (isOnlineCustom()) {
+        syncOnlineCustomRoom();
+      } else {
+        triggerAIIfNeeded();
+      }
+      return true;
+    }
+
+    function executeShatterEdge(boardIdx, edgeIndex) {
+      if (state.variant !== 'shatter' || !state.shatterModeActive) return false;
+      if (isOnlineCustom() && state.currentPlayer !== state.online.mySeat) return false;
+
+      const b = state.boards[boardIdx];
+      const targetEdge = b?.edges[edgeIndex];
+      if (!targetEdge || targetEdge.owner === state.currentPlayer) {
+        SoundFX.playInvalid();
+        showToast('Select an opponent line to shatter.');
+        return false;
+      }
+      if ((state.shatterCharges[state.currentPlayer] || 0) <= 0) {
+        SoundFX.playInvalid();
+        return false;
+      }
+
+      saveHistorySnapshot();
+      state.shatterCharges[state.currentPlayer]--;
+      state.shatterModeActive = false;
+
+      b.edges.splice(edgeIndex, 1);
+      const beforeCount = b.triangles.length;
+      b.triangles = b.triangles.filter(t => {
+        const verts = [t.a, t.b, t.c];
+        return !(verts.includes(targetEdge.u) && verts.includes(targetEdge.v));
+      });
+      const brokenCount = beforeCount - b.triangles.length;
+
+      recomputeScoresAndAnchors();
+      SoundFX.playShatter();
+      showToast(
+        brokenCount > 0
+          ? `Line shattered! ${brokenCount} triangle${brokenCount > 1 ? 's' : ''} destroyed.`
+          : 'Opponent line shattered!'
+      );
+
+      advanceTurn();
+      updateHUD();
+      if (isOnlineCustom()) {
+        syncOnlineCustomRoom();
+      } else {
+        triggerAIIfNeeded();
+      }
+      return true;
+    }
+
+    function undoMove() {
+      if (state.history.length === 0 || state.aiThinking || isOnlineCustom()) return;
+      const snap = state.history.pop();
+      state.boards = snap.boards;
+      state.scores = snap.scores;
+      state.shatterCharges = snap.shatterCharges;
+      state.currentPlayer = snap.currentPlayer;
+      state.gameOver = snap.gameOver;
+      state.selectedNode = null;
+      state.shatterModeActive = false;
+      recomputeScoresAndAnchors();
+      computeMisereForcedMoves();
+      document.getElementById('modalVictory').classList.add('hidden');
+      updateHUD();
+      SoundFX.playSelect();
+    }
+
+    // =========================================================================
+    // 5. VARIANT-AWARE AI ENGINE (Supports all variants & Multiverse boards)
+    // =========================================================================
+    function triggerAIIfNeeded() {
+      if (state.gameOver || state.opponentMode !== 'ai' || state.currentPlayer === 1) return;
+
+      state.aiThinking = true;
+      updateHUD();
+
+      setTimeout(() => {
+        if (state.gameOver || state.currentPlayer === 1) {
+          state.aiThinking = false;
+          return;
+        }
+
+        const p = state.currentPlayer;
+
+        if (state.variant === 'shatter' && (state.shatterCharges[p] || 0) > 0 && Math.random() < 0.35) {
+          const b = state.boards[0];
+          const oppTriEdgeIdx = b.edges.findIndex(e => {
+            if (e.owner === p) return false;
+            return b.triangles.some(t => [t.a, t.b, t.c].includes(e.u) && [t.a, t.b, t.c].includes(e.v));
+          });
+          if (oppTriEdgeIdx !== -1) {
+            state.aiThinking = false;
+            state.shatterModeActive = true;
+            executeShatterEdge(0, oppTriEdgeIdx);
+            return;
+          }
+        }
+
+        let candidateMoves =
+          state.variant === 'misere' && state.forcedMoves.length > 0
+            ? state.forcedMoves
+            : getAllValidMovesAllBoards();
+
+        if (candidateMoves.length === 0) {
+          state.aiThinking = false;
+          return;
+        }
+
+        let bestMove = candidateMoves[0];
+        let bestScore = -Infinity;
+
+        for (const m of candidateMoves) {
+          const tris = findNewEmptyTrianglesOnBoard(m.boardIdx, m.u, m.v);
+          const pts = tris.reduce((sum, t) => sum + t.points, 0);
+          let val = state.variant === 'misere'
+            ? -pts * 100 + (Math.random() - 0.5) * 15
+            : pts * 120 + (Math.random() - 0.5) * 25;
+
+          if (val > bestScore) {
+            bestScore = val;
+            bestMove = m;
+          }
+        }
+
+        state.aiThinking = false;
+        executeMove(bestMove.boardIdx, bestMove.u, bestMove.v);
+      }, 320);
+    }
+
+    // =========================================================================
+    // 6. MULTI-SEAT ONLINE ROOM SYNC (2 to 10 Players via Firestore)
+    // =========================================================================
+    function generateRoomCode() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let code = '';
+      for (let i = 0; i < 6; i++) {
+        code += chars[Math.floor(Math.random() * chars.length)];
+      }
+      return code;
+    }
+
+    function getCustomRoomRef(code) {
+      return doc(db, 'artifacts', appId, 'public', 'data', 'vertex_rooms', code.toUpperCase());
+    }
+
+    function buildFreshBoardsForCurrentVariant() {
+      const vMeta = VARIANTS[state.variant];
+      const boardCount = state.variant === 'multiverse'
+        ? Math.max(2, Math.floor(state.playerCount / 2))
+        : 1;
+      const nodesPerBoard = state.variant === 'multiverse'
+        ? (state.playerCount >= 8 ? 11 : 13)
+        : vMeta.nodeCount;
+
+      const boards = [];
+      for (let b = 0; b < boardCount; b++) {
+        const presetChoice = state.variant === 'multiverse'
+          ? (b % 2 === 0 ? 'hexaring' : 'starburst')
+          : vMeta.preset;
+        boards.push({
+          id: b,
+          nodes: generateConstellation(presetChoice, nodesPerBoard),
+          edges: [],
+          triangles: []
+        });
+      }
+      return boards;
+    }
+
+    async function createOnlineCustomRoom() {
+      if (!db || !currentUser) {
+        showToast('Connecting to online service...');
+        return;
+      }
+
+      const code = generateRoomCode();
+      const vMeta = VARIANTS[state.variant];
+      const count = state.variant === 'multiverse' ? state.multiversePlayers : vMeta.players || vMeta.defaultPlayers;
+      state.playerCount = count;
+      state.playerColors = generateShuffledPlayerColors(count);
+      state.boards = buildFreshBoardsForCurrentVariant();
+
+      const initialScores = {};
+      for (let p = 1; p <= count; p++) initialScores[p] = 0;
+
+      const roomPayload = {
+        roomCode: code,
+        isCustomLab: true,
+        variant: state.variant,
+        playerCount: count,
+        playerColors: state.playerColors,
+        boards: state.boards.map(b => ({
+          id: b.id,
+          nodes: b.nodes.map(n => ({ id: n.id, x: n.x, y: n.y, anchored: false })),
+          edges: [],
+          triangles: []
+        })),
+        scores: initialScores,
+        shatterCharges: { 1: 2, 2: 2 },
+        currentPlayer: 1,
+        gameOver: false,
+        matchStarted: false,
+        seats: { 1: currentUser.uid },
+        updatedAt: Date.now()
+      };
+
+      try {
+        await setDoc(getCustomRoomRef(code), roomPayload);
+        state.online.roomCode = code;
+        state.online.mySeat = 1;
+        state.online.seats = { 1: currentUser.uid };
+        state.online.matchStarted = false;
+
+        subscribeToCustomRoom(code);
+        showToast(`Custom Room ${code} created! Share code with friends.`);
+      } catch (err) {
+        console.error('Error creating custom room:', err);
+        showToast('Failed to create room.');
+      }
+    }
+
+    async function joinOnlineCustomRoom(rawCode) {
+      const code = (rawCode || '').trim().toUpperCase();
+      if (code.length < 4) {
+        showToast('Enter a valid 6-character room code.');
+        return;
+      }
+      if (!db || !currentUser) {
+        showToast('Connecting to online service...');
+        return;
+      }
+
+      try {
+        const roomRef = getCustomRoomRef(code);
+        const snap = await getDoc(roomRef);
+        if (!snap.exists()) {
+          showToast(`Room "${code}" not found.`);
+          return;
+        }
+
+        const data = snap.data();
+        if (!data.isCustomLab) {
+          showToast('That code is for Standard mode — join it on the main page.');
+          return;
+        }
+
+        const maxPlayers = data.playerCount || 4;
+        const seats = data.seats || {};
+        let mySeat = null;
+
+        // Check if already seated
+        for (let s = 1; s <= maxPlayers; s++) {
+          if (seats[s] === currentUser.uid) {
+            mySeat = s;
+            break;
+          }
+        }
+
+        // Otherwise claim first open seat
+        if (!mySeat) {
+          for (let s = 1; s <= maxPlayers; s++) {
+            if (!seats[s]) {
+              mySeat = s;
+              seats[s] = currentUser.uid;
+              break;
+            }
+          }
+        }
+
+        if (!mySeat) {
+          showToast(`Room is full (${maxPlayers}/${maxPlayers} players).`);
+          return;
+        }
+
+        const filledCount = Object.keys(seats).length;
+        const autoStart = filledCount >= maxPlayers;
+
+        await updateDoc(roomRef, {
+          seats,
+          matchStarted: data.matchStarted || autoStart,
+          updatedAt: Date.now()
+        });
+
+        state.opponentMode = 'online';
+        state.online.roomCode = code;
+        state.online.mySeat = mySeat;
+
+        document.getElementById('modalSetup').classList.add('hidden');
+        subscribeToCustomRoom(code);
+        showToast(`Joined ${code} as Player ${mySeat}!`);
+      } catch (err) {
+        console.error('Error joining custom room:', err);
+        showToast('Could not join room.');
+      }
+    }
+
+    function subscribeToCustomRoom(code) {
+      if (roomUnsubscribe) {
+        roomUnsubscribe();
+        roomUnsubscribe = null;
+      }
+
+      roomUnsubscribe = onSnapshot(getCustomRoomRef(code), (snap) => {
+        if (!snap.exists()) return;
+        const data = snap.data();
+
+        const wasGameOver = state.gameOver;
+        state.variant = data.variant || 'multiverse';
+        state.playerCount = data.playerCount || 4;
+        state.playerColors = data.playerColors || generateShuffledPlayerColors(state.playerCount);
+        state.boards = (data.boards || []).map(b => ({
+          id: b.id,
+          nodes: (b.nodes || []).map(n => ({ ...n })),
+          edges: (b.edges || []).map(e => ({ ...e })),
+          triangles: (b.triangles || []).map(t => ({ ...t }))
+        }));
+        state.scores = data.scores || {};
+        state.shatterCharges = data.shatterCharges || { 1: 2, 2: 2 };
+        state.currentPlayer = data.currentPlayer || 1;
+        state.gameOver = Boolean(data.gameOver);
+
+        state.online.seats = data.seats || {};
+        state.online.matchStarted = Boolean(data.matchStarted);
+
+        recomputeScoresAndAnchors();
+        computeMisereForcedMoves();
+
+        if (!wasGameOver && state.gameOver) {
+          setTimeout(showVictoryModal, 350);
+        } else if (wasGameOver && !state.gameOver) {
+          document.getElementById('modalVictory').classList.add('hidden');
+        }
+
+        updateHUD();
+      });
+    }
+
+    async function syncOnlineCustomRoom() {
+      if (!isOnlineCustom() || !db) return;
+      try {
+        await updateDoc(getCustomRoomRef(state.online.roomCode), {
+          boards: state.boards.map(b => ({
+            id: b.id,
+            nodes: b.nodes.map(n => ({ id: n.id, x: n.x, y: n.y, anchored: n.anchored })),
+            edges: b.edges.map(e => ({ u: e.u, v: e.v, owner: e.owner, revealedInFog: Boolean(e.revealedInFog) })),
+            triangles: b.triangles.map(t => ({ a: t.a, b: t.b, c: t.c, owner: t.owner, points: t.points || 1 }))
+          })),
+          scores: state.scores,
+          shatterCharges: state.shatterCharges,
+          currentPlayer: state.currentPlayer,
+          gameOver: state.gameOver,
+          updatedAt: Date.now()
+        });
+      } catch (err) {
+        console.error('Sync custom room error:', err);
+      }
+    }
+
+    async function startOnlineLobbyMatchNow() {
+      if (!isOnlineCustom() || !db) return;
+      try {
+        await updateDoc(getCustomRoomRef(state.online.roomCode), {
+          matchStarted: true,
+          updatedAt: Date.now()
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function resetOnlineCustomMatch() {
+      if (!isOnlineCustom() || !db) return;
+      state.playerColors = generateShuffledPlayerColors(state.playerCount);
+      state.boards = buildFreshBoardsForCurrentVariant();
+      const freshScores = {};
+      for (let p = 1; p <= state.playerCount; p++) freshScores[p] = 0;
+      try {
+        await updateDoc(getCustomRoomRef(state.online.roomCode), {
+          playerColors: state.playerColors,
+          boards: state.boards.map(b => ({
+            id: b.id,
+            nodes: b.nodes.map(n => ({ id: n.id, x: n.x, y: n.y, anchored: false })),
+            edges: [],
+            triangles: []
+          })),
+          scores: freshScores,
+          shatterCharges: { 1: 2, 2: 2 },
+          currentPlayer: 1,
+          gameOver: false,
+          updatedAt: Date.now()
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function leaveOnlineCustomRoom() {
+      if (roomUnsubscribe) {
+        roomUnsubscribe();
+        roomUnsubscribe = null;
+      }
+      state.online.roomCode = null;
+      state.online.mySeat = null;
+      state.online.seats = {};
+      state.online.matchStarted = false;
+      state.opponentMode = 'ai';
+      startVariantMatch();
+      showToast('Left online room');
+    }
+
+    // =========================================================================
+    // 7. MULTI-BOARD CANVAS RENDERING & INTERACTION (1 to 5 Parallel Boards)
+    // =========================================================================
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const container = document.getElementById('canvasContainer');
+
+    let canvasW = 800;
+    let canvasH = 600;
+    let dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    function resizeCanvas() {
+      const rect = container.getBoundingClientRect();
+      canvasW = Math.max(280, rect.width);
+      canvasH = Math.max(300, rect.height);
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.floor(canvasW * dpr);
+      canvas.height = Math.floor(canvasH * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+
+    /**
+     * Computes viewport rectangle { x, y, w, h } for each parallel board (1..5 boards).
+     */
+    function getBoardViewport(boardIdx) {
+      const total = state.boards.length;
+      const topInset = 28; // leave clean headroom for top HUD pill
+      const usableH = canvasH - topInset;
+
+      if (total <= 1) {
+        return { x: 0, y: topInset * 0.5, w: canvasW, h: canvasH - topInset * 0.5 };
+      }
+
+      // 2 boards side-by-side (or stacked on narrow portrait screens)
+      if (total === 2) {
+        if (canvasW >= 540) {
+          const halfW = canvasW / 2;
+          return { x: boardIdx * halfW, y: topInset, w: halfW, h: usableH };
+        } else {
+          const halfH = usableH / 2;
+          return { x: 0, y: topInset + boardIdx * halfH, w: canvasW, h: halfH };
+        }
+      }
+
+      // 3 to 5 boards: arrange in balanced 2-row grid
+      const cols = Math.ceil(total / 2);
+      const rows = 2;
+      const col = boardIdx % cols;
+      const row = Math.floor(boardIdx / cols);
+      const cellW = canvasW / cols;
+      const cellH = usableH / rows;
+      return {
+        x: col * cellW,
+        y: topInset + row * cellH,
+        w: cellW,
+        h: cellH
+      };
+    }
+
+    function nodeToScreen(boardIdx, node) {
+      const vp = getBoardViewport(boardIdx);
+      const pad = Math.min(vp.w, vp.h) * 0.11;
+      return {
+        x: vp.x + pad + node.x * (vp.w - pad * 2),
+        y: vp.y + pad + node.y * (vp.h - pad * 2)
+      };
+    }
+
+    function findClosestNodeAnyBoard(screenX, screenY, maxDist = 26) {
+      let best = null;
+      let bestD = maxDist;
+      for (let bIdx = 0; bIdx < state.boards.length; bIdx++) {
+        const b = state.boards[bIdx];
+        for (let i = 0; i < b.nodes.length; i++) {
+          const pos = nodeToScreen(bIdx, b.nodes[i]);
+          const d = Math.hypot(pos.x - screenX, pos.y - screenY);
+          if (d < bestD) {
+            bestD = d;
+            best = { boardIdx: bIdx, nodeIdx: i };
+          }
+        }
+      }
+      return best;
+    }
+
+    function distToSegment(px, py, x1, y1, x2, y2) {
+      const l2 = (x2 - x1) ** 2 + (y2 - y1) ** 2;
+      if (l2 === 0) return Math.hypot(px - x1, py - y1);
+      let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+      t = Math.max(0, Math.min(1, t));
+      return Math.hypot(px - (x1 + t * (x2 - x1)), py - (y1 + t * (y2 - y1)));
+    }
+
+    function findClosestEdgeAnyBoard(screenX, screenY, maxDist = 16) {
+      let best = null;
+      let bestD = maxDist;
+      for (let bIdx = 0; bIdx < state.boards.length; bIdx++) {
+        const b = state.boards[bIdx];
+        for (let i = 0; i < b.edges.length; i++) {
+          const e = b.edges[i];
+          const p1 = nodeToScreen(bIdx, b.nodes[e.u]);
+          const p2 = nodeToScreen(bIdx, b.nodes[e.v]);
+          const d = distToSegment(screenX, screenY, p1.x, p1.y, p2.x, p2.y);
+          if (d < bestD) {
+            bestD = d;
+            best = { boardIdx: bIdx, edgeIdx: i };
+          }
+        }
+      }
+      return best;
+    }
+
+    function getPointerCoords(evt) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+      const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    }
+
+    let isDragging = false;
+
+    function handlePointerDown(evt) {
+      if (state.gameOver || state.aiThinking) return;
+      if (state.opponentMode === 'ai' && state.currentPlayer !== 1) return;
+      if (isOnlineCustom() && (!state.online.matchStarted || state.currentPlayer !== state.online.mySeat)) return;
+
+      const pt = getPointerCoords(evt);
+      state.pointerPos = pt;
+
+      if (state.variant === 'shatter' && state.shatterModeActive) {
+        const hitEdge = findClosestEdgeAnyBoard(pt.x, pt.y, 18);
+        if (hitEdge) {
+          executeShatterEdge(hitEdge.boardIdx, hitEdge.edgeIdx);
+        } else {
+          showToast('Tap an opponent line to shatter it.');
+        }
+        return;
+      }
+
+      const hit = findClosestNodeAnyBoard(pt.x, pt.y, 28);
+      if (hit) {
+        const b = state.boards[hit.boardIdx];
+        if (b.nodes[hit.nodeIdx].anchored) {
+          SoundFX.playInvalid();
+          showToast('Anchored dot — locked by surrounding triangles.');
+          return;
+        }
+
+        if (state.selectedNode && state.selectedNode.boardIdx === hit.boardIdx && state.selectedNode.nodeIdx !== hit.nodeIdx) {
+          if (executeMove(hit.boardIdx, state.selectedNode.nodeIdx, hit.nodeIdx)) {
+            isDragging = false;
+            return;
+          } else {
+            state.selectedNode = hit;
+            isDragging = true;
+            SoundFX.playSelect();
+          }
+        } else if (state.selectedNode && state.selectedNode.boardIdx === hit.boardIdx && state.selectedNode.nodeIdx === hit.nodeIdx) {
+          state.selectedNode = null;
+          isDragging = false;
+        } else {
+          state.selectedNode = hit;
+          isDragging = true;
+          SoundFX.playSelect();
+        }
+      } else {
+        state.selectedNode = null;
+        isDragging = false;
+      }
+    }
+
+    function handlePointerMove(evt) {
+      const pt = getPointerCoords(evt);
+      state.pointerPos = pt;
+      state.hoverNode = findClosestNodeAnyBoard(pt.x, pt.y, 26);
+      state.hoverEdge = state.shatterModeActive ? findClosestEdgeAnyBoard(pt.x, pt.y, 18) : null;
+    }
+
+    function handlePointerUp() {
+      if (!isDragging || !state.selectedNode) return;
+      isDragging = false;
+      const hit = state.hoverNode;
+      if (hit && hit.boardIdx === state.selectedNode.boardIdx && hit.nodeIdx !== state.selectedNode.nodeIdx) {
+        executeMove(hit.boardIdx, state.selectedNode.nodeIdx, hit.nodeIdx);
+      }
+    }
+
+    canvas.addEventListener('mousedown', handlePointerDown);
+    canvas.addEventListener('mousemove', handlePointerMove);
+    window.addEventListener('mouseup', handlePointerUp);
+    canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handlePointerDown(e); }, { passive: false });
+    canvas.addEventListener('touchmove', (e) => { e.preventDefault(); handlePointerMove(e); }, { passive: false });
+    canvas.addEventListener('touchend', (e) => { e.preventDefault(); handlePointerUp(); }, { passive: false });
+
+    function isEdgeVisibleInEclipse(b, edge) {
+      if (state.variant !== 'eclipse' || state.gameOver) return true;
+      const viewer = isOnlineCustom()
+        ? state.online.mySeat
+        : (state.opponentMode === 'ai' ? 1 : state.currentPlayer);
+      if (edge.owner === viewer || edge.revealedInFog) return true;
+      const touchesViewer = b.edges.some(
+        e => e.owner === viewer && (e.u === edge.u || e.u === edge.v || e.v === edge.u || e.v === edge.v)
+      );
+      if (touchesViewer) return true;
+      return b.triangles.some(t => {
+        const vs = [t.a, t.b, t.c];
+        return vs.includes(edge.u) && vs.includes(edge.v);
+      });
+    }
+
+    function renderLoop() {
+      ctx.clearRect(0, 0, canvasW, canvasH);
+      const neutral = getNeutralPalette();
+      const activeColor = state.playerColors[state.currentPlayer] || DISTINCT_COLOR_POOL[0];
+
+      // Render each parallel board in its viewport cell
+      for (let bIdx = 0; bIdx < state.boards.length; bIdx++) {
+        const b = state.boards[bIdx];
+        const vp = getBoardViewport(bIdx);
+
+        // If Multiverse (>1 board), draw clean cell boundary & subtle board tag
+        if (state.boards.length > 1) {
+          ctx.save();
+          ctx.strokeStyle = neutral.boardDivider;
+          ctx.lineWidth = 1;
+          ctx.strokeRect(vp.x + 4, vp.y + 4, vp.w - 8, vp.h - 8);
+
+          ctx.fillStyle = neutral.boardLabel;
+          ctx.font = '500 10px "JetBrains Mono", monospace';
+          ctx.fillText(`BOARD 0${bIdx + 1}`, vp.x + 12, vp.y + 18);
+          ctx.restore();
+        }
+
+        // 1. Claimed Triangles
+        for (const tri of b.triangles) {
+          const pColor = state.playerColors[tri.owner] || DISTINCT_COLOR_POOL[0];
+          const pa = nodeToScreen(bIdx, b.nodes[tri.a]);
+          const pb = nodeToScreen(bIdx, b.nodes[tri.b]);
+          const pc = nodeToScreen(bIdx, b.nodes[tri.c]);
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(pa.x, pa.y);
+          ctx.lineTo(pb.x, pb.y);
+          ctx.lineTo(pc.x, pc.y);
+          ctx.closePath();
+          ctx.fillStyle = pColor.fill;
+          ctx.fill();
+
+          if (tri.points > 1) {
+            const cx = (pa.x + pb.x + pc.x) / 3;
+            const cy = (pa.y + pb.y + pc.y) / 3;
+            ctx.fillStyle = pColor.hex;
+            ctx.font = '600 10px "JetBrains Mono", monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('3×', cx, cy);
+          }
+          ctx.restore();
+        }
+
+        // 2. Misère Forced Triangle Lines Highlight
+        if (state.variant === 'misere' && state.forcedMoves.length > 0 && !state.gameOver) {
+          for (const m of state.forcedMoves) {
+            if (m.boardIdx !== bIdx) continue;
+            const p1 = nodeToScreen(bIdx, b.nodes[m.u]);
+            const p2 = nodeToScreen(bIdx, b.nodes[m.v]);
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = neutral.guideForced;
+            ctx.lineWidth = 1.4;
+            ctx.setLineDash([4, 4]);
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
+
+        // 3. Valid Target Guides when Node Selected on this Board
+        if (state.selectedNode && state.selectedNode.boardIdx === bIdx && !state.gameOver && !state.shatterModeActive) {
+          const origin = nodeToScreen(bIdx, b.nodes[state.selectedNode.nodeIdx]);
+          for (let j = 0; j < b.nodes.length; j++) {
+            if (j === state.selectedNode.nodeIdx) continue;
+            if (isValidMoveOnBoard(bIdx, state.selectedNode.nodeIdx, j)) {
+              const target = nodeToScreen(bIdx, b.nodes[j]);
+              ctx.save();
+              ctx.beginPath();
+              ctx.moveTo(origin.x, origin.y);
+              ctx.lineTo(target.x, target.y);
+              ctx.strokeStyle = neutral.guideNormal;
+              ctx.lineWidth = 0.9;
+              ctx.setLineDash([2, 5]);
+              ctx.stroke();
+              ctx.restore();
+            }
+          }
+        }
+
+        // 4. Aiming Line
+        if (state.selectedNode && state.selectedNode.boardIdx === bIdx && state.pointerPos && !state.gameOver && !state.shatterModeActive) {
+          const pStart = nodeToScreen(bIdx, b.nodes[state.selectedNode.nodeIdx]);
+          let pEnd = state.pointerPos;
+          let valid = true;
+          if (state.hoverNode && state.hoverNode.boardIdx === bIdx && state.hoverNode.nodeIdx !== state.selectedNode.nodeIdx) {
+            pEnd = nodeToScreen(bIdx, b.nodes[state.hoverNode.nodeIdx]);
+            valid = isValidMoveOnBoard(bIdx, state.selectedNode.nodeIdx, state.hoverNode.nodeIdx);
+          }
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(pStart.x, pStart.y);
+          ctx.lineTo(pEnd.x, pEnd.y);
+          ctx.strokeStyle = valid ? activeColor.hex : neutral.invalidStroke;
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([4, 4]);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // 5. Woven Edges
+        for (let i = 0; i < b.edges.length; i++) {
+          const edge = b.edges[i];
+          if (!isEdgeVisibleInEclipse(b, edge)) continue;
+
+          const pColor = state.playerColors[edge.owner] || DISTINCT_COLOR_POOL[0];
+          const p1 = nodeToScreen(bIdx, b.nodes[edge.u]);
+          const p2 = nodeToScreen(bIdx, b.nodes[edge.v]);
+          const isShatterHover =
+            state.shatterModeActive &&
+            state.hoverEdge &&
+            state.hoverEdge.boardIdx === bIdx &&
+            state.hoverEdge.edgeIdx === i &&
+            edge.owner !== state.currentPlayer;
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.lineCap = 'round';
+          ctx.lineWidth = isShatterHover ? 3 : 1.75;
+          ctx.strokeStyle = isShatterHover ? neutral.invalidStroke : pColor.hex;
+          if (edge.revealedInFog && edge.owner !== state.currentPlayer && !state.gameOver) {
+            ctx.setLineDash([3, 3]);
+          }
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // 6. Constellation Nodes
+        for (let i = 0; i < b.nodes.length; i++) {
+          const node = b.nodes[i];
+          const pos = nodeToScreen(bIdx, node);
+          const isSelected = state.selectedNode && state.selectedNode.boardIdx === bIdx && state.selectedNode.nodeIdx === i;
+          const isSingularityCore = state.variant === 'gravity' && i === 0;
+
+          ctx.save();
+          if (isSingularityCore) {
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, 9.5, 0, Math.PI * 2);
+            ctx.strokeStyle = (state.playerColors[2] || DISTINCT_COLOR_POOL[0]).hex;
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+          } else if (isSelected) {
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, 8.5, 0, Math.PI * 2);
+            ctx.strokeStyle = activeColor.hex;
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+          }
+
+          const radius = node.anchored ? 2.8 : isSelected ? 4.4 : 3.5;
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
+          if (node.anchored) {
+            ctx.fillStyle = neutral.nodeAnchoredFill;
+            ctx.strokeStyle = neutral.nodeAnchoredStroke;
+          } else {
+            ctx.fillStyle = isSingularityCore ? (state.playerColors[2] || DISTINCT_COLOR_POOL[0]).hex : neutral.nodeFill;
+            ctx.strokeStyle = neutral.nodeStroke;
+          }
+          ctx.lineWidth = 1.1;
+          ctx.fill();
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+
+      requestAnimationFrame(renderLoop);
+    }
+
+    // =========================================================================
+    // 8. HUD & MODAL CONTROLLERS
+    // =========================================================================
+    let toastTimer = null;
+    function showToast(msg) {
+      const el = document.getElementById('toastPill');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.add('hidden'), 2600);
+    }
+
+    function updateHUD() {
+      const vMeta = VARIANTS[state.variant];
+
+      document.getElementById('hudVariantName').textContent = state.variant === 'multiverse'
+        ? `Multiverse (${state.boards.length} Boards)`
+        : vMeta.name;
+      document.getElementById('hudTurnBadge').textContent = state.gameOver ? 'Complete' : `Turn: P${state.currentPlayer}`;
+      document.getElementById('hudMovesLeft').textContent = `${getAllValidMovesAllBoards().length} moves`;
+      document.getElementById('footerRuleHint').textContent = vMeta.hint;
+
+      // Render Multi-Player Score Cards (2 to 10 players)
+      const strip = document.getElementById('scoreStrip');
+      if (state.playerCount <= 3) {
+        strip.className = `grid grid-cols-${state.playerCount} gap-1.5 items-center`;
+      } else if (state.playerCount <= 5) {
+        strip.className = `grid grid-cols-2 sm:grid-cols-${state.playerCount} gap-1.5 items-center`;
+      } else {
+        strip.className = 'grid grid-cols-3 sm:grid-cols-5 gap-1.5 items-center';
+      }
+
+      strip.innerHTML = '';
+      for (let p = 1; p <= state.playerCount; p++) {
+        const isTurn = !state.gameOver && state.currentPlayer === p;
+        const pColor = state.playerColors[p] || DISTINCT_COLOR_POOL[(p - 1) % DISTINCT_COLOR_POOL.length];
+
+        let tag = `P${p}`;
+        if (isOnlineCustom()) {
+          const isMe = state.online.mySeat === p;
+          const isSeated = Boolean(state.online.seats[p]);
+          tag = isMe ? `P${p} (YOU)` : (isSeated ? `P${p}` : `P${p} · OPEN`);
+        } else if (state.opponentMode === 'ai') {
+          tag = p === 1 ? 'YOU (P1)' : `BOT P${p}`;
+        }
+
+        const card = document.createElement('div');
+        card.className = 'surface-panel rounded px-2.5 py-1.5 flex items-center justify-between';
+        if (isTurn) {
+          card.style.borderColor = pColor.hex;
+        }
+        card.innerHTML = `
+          <div class="flex items-center gap-1.5 min-w-0">
+            <span class="w-2 h-2 rounded-full shrink-0" style="background:${pColor.hex}"></span>
+            <span class="text-[10px] font-mono-tech font-medium truncate" style="color:${pColor.hex}">${tag}</span>
+          </div>
+          <span class="font-mono-tech text-sm font-semibold text-main pl-1.5">${state.scores[p] || 0}</span>
+        `;
+        strip.appendChild(card);
+      }
+
+      // Online Lobby & Room Pill
+      const lobbyBanner = document.getElementById('onlineLobbyBanner');
+      const onlinePill = document.getElementById('onlineRoomPill');
+      const btnLeave = document.getElementById('btnLeaveRoom');
+      const btnUndo = document.getElementById('btnUndo');
+      const btnNewGame = document.getElementById('btnNewGame');
+
+      if (isOnlineCustom()) {
+        onlinePill.classList.remove('hidden');
+        onlinePill.classList.add('flex');
+        btnLeave.classList.remove('hidden');
+        btnUndo.classList.add('hidden');
+        btnNewGame.classList.add('hidden');
+        document.getElementById('hudRoomCode').textContent = state.online.roomCode;
+
+        if (!state.online.matchStarted) {
+          lobbyBanner.classList.remove('hidden');
+          const joinedCount = Object.keys(state.online.seats).length;
+          document.getElementById('lobbySeatCount').textContent = `${joinedCount}/${state.playerCount} Players Joined`;
+          document.getElementById('btnStartOnlineMatch').classList.toggle('hidden', state.online.mySeat !== 1);
+        } else {
+          lobbyBanner.classList.add('hidden');
+        }
+      } else {
+        lobbyBanner.classList.add('hidden');
+        onlinePill.classList.add('hidden');
+        onlinePill.classList.remove('flex');
+        btnLeave.classList.add('hidden');
+        btnUndo.classList.remove('hidden');
+        btnNewGame.classList.remove('hidden');
+        btnUndo.disabled = state.history.length === 0 || state.aiThinking;
+      }
+
+      // Shatter Action Bar
+      const actionBar = document.getElementById('variantActionBar');
+      const shatterBtn = document.getElementById('btnShatterToggle');
+      if (state.variant === 'shatter' && !state.gameOver) {
+        actionBar.classList.remove('hidden');
+        const charges = state.shatterCharges[state.currentPlayer] || 0;
+        document.getElementById('shatterChargesCount').textContent = charges;
+        const canUse = charges > 0 && (!isOnlineCustom() || state.currentPlayer === state.online.mySeat) && (state.opponentMode !== 'ai' || state.currentPlayer === 1);
+        shatterBtn.disabled = !canUse;
+        const c2 = (state.playerColors[2] || DISTINCT_COLOR_POOL[0]).hex;
+        shatterBtn.style.borderColor = state.shatterModeActive ? c2 : '';
+        shatterBtn.style.color = state.shatterModeActive ? c2 : '';
+      } else {
+        actionBar.classList.add('hidden');
+      }
+
+      // Misère Forced Banner
+      const forcedBanner = document.getElementById('forcedBanner');
+      if (state.variant === 'misere' && state.forcedMoves.length > 0 && !state.gameOver) {
+        forcedBanner.classList.remove('hidden');
+      } else {
+        forcedBanner.classList.add('hidden');
+      }
+    }
+
+    function showVictoryModal() {
+      const isMisere = state.variant === 'misere';
+      let bestP = 1;
+      let bestScore = state.scores[1] || 0;
+      let tie = false;
+
+      for (let p = 2; p <= state.playerCount; p++) {
+        const sc = state.scores[p] || 0;
+        const better = isMisere ? sc < bestScore : sc > bestScore;
+        if (better) {
+          bestScore = sc;
+          bestP = p;
+          tie = false;
+        } else if (sc === bestScore) {
+          tie = true;
+        }
+      }
+
+      document.getElementById('victoryTitle').textContent = tie
+        ? 'TIE GAME'
+        : `PLAYER ${bestP} WINS`;
+      document.getElementById('victorySubtitle').textContent = isMisere
+        ? 'Lowest penalty score wins!'
+        : 'Highest triangle territory wins.';
+
+      const grid = document.getElementById('victoryScoreGrid');
+      grid.className = state.playerCount >= 4 ? 'grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-56 overflow-y-auto' : 'grid grid-cols-2 gap-2';
+      grid.innerHTML = '';
+      for (let p = 1; p <= state.playerCount; p++) {
+        const pColor = state.playerColors[p] || DISTINCT_COLOR_POOL[0];
+        const box = document.createElement('div');
+        box.className = 'surface-elevated rounded p-2.5 flex items-center justify-between';
+        box.innerHTML = `
+          <div class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full" style="background:${pColor.hex}"></span>
+            <span class="text-[11px] font-mono-tech" style="color:${pColor.hex}">P${p}</span>
+          </div>
+          <div class="font-mono-tech text-base font-semibold text-main">${state.scores[p] || 0}</div>
+        `;
+        grid.appendChild(box);
+      }
+
+      document.getElementById('modalVictory').classList.remove('hidden');
+    }
+
+    function openVariantRulesModal() {
+      const vMeta = VARIANTS[state.variant];
+      document.getElementById('rulesModalTitle').textContent = vMeta.name;
+      document.getElementById('rulesModalTagline').textContent = vMeta.tagline;
+      const body = document.getElementById('rulesModalBody');
+      body.innerHTML = vMeta.rules.map(r => `
+        <div class="surface-elevated rounded p-3">${r}</div>
+      `).join('');
+      document.getElementById('modalRules').classList.remove('hidden');
+    }
+
+    function syncSetupUI() {
+      document.querySelectorAll('.variant-btn').forEach(btn => {
+        const active = btn.dataset.variant === state.variant;
+        btn.style.borderColor = active ? 'var(--text-primary)' : '';
+        btn.style.backgroundColor = active ? 'var(--bg-elevated)' : '';
+      });
+      document.querySelectorAll('.opp-btn').forEach(btn => {
+        const active = btn.dataset.opp === state.opponentMode;
+        btn.style.borderColor = active ? 'var(--text-primary)' : '';
+        btn.style.backgroundColor = active ? 'var(--bg-elevated)' : '';
+      });
+
+      const mvRow = document.getElementById('multiverseConfigRow');
+      mvRow.classList.toggle('hidden', state.variant !== 'multiverse');
+      const boardsCount = Math.floor(state.multiversePlayers / 2);
+      document.getElementById('sliderMultiverseVal').textContent = `${state.multiversePlayers} Players · ${boardsCount} Boards`;
+
+      const onlinePanel = document.getElementById('onlineCustomPanel');
+      onlinePanel.classList.toggle('hidden', state.opponentMode !== 'online');
+
+      document.getElementById('btnApplySetup').textContent =
+        state.opponentMode === 'online' ? 'Create Online Room' : 'Launch Variant';
+    }
+
+    function startVariantMatch() {
+      if (state.opponentMode === 'online') {
+        createOnlineCustomRoom();
+        return;
+      }
+
+      if (roomUnsubscribe) {
+        roomUnsubscribe();
+        roomUnsubscribe = null;
+      }
+
+      const vMeta = VARIANTS[state.variant];
+      state.playerCount = state.variant === 'multiverse'
+        ? state.multiversePlayers
+        : (vMeta.players || vMeta.defaultPlayers);
+      state.playerColors = generateShuffledPlayerColors(state.playerCount);
+      state.boards = buildFreshBoardsForCurrentVariant();
+
+      state.scores = {};
+      for (let p = 1; p <= state.playerCount; p++) state.scores[p] = 0;
+
+      state.shatterCharges = { 1: 2, 2: 2 };
+      state.shatterModeActive = false;
+      state.currentPlayer = 1;
+      state.gameOver = false;
+      state.selectedNode = null;
+      state.hoverNode = null;
+      state.history = [];
+      state.aiThinking = false;
+      computeMisereForcedMoves();
+      document.getElementById('modalVictory').classList.add('hidden');
+      updateHUD();
+    }
+
+    // Event Listeners
+    document.getElementById('btnTheme').addEventListener('click', toggleTheme);
+    document.getElementById('btnSound').addEventListener('click', () => {
+      SoundFX.enabled = !SoundFX.enabled;
+      document.getElementById('soundValueLabel').textContent = SoundFX.enabled ? 'On' : 'Off';
+    });
+
+    document.getElementById('btnVariantInfo').addEventListener('click', openVariantRulesModal);
+    document.getElementById('closeRules').addEventListener('click', () => document.getElementById('modalRules').classList.add('hidden'));
+    document.getElementById('btnRulesGotIt').addEventListener('click', () => document.getElementById('modalRules').classList.add('hidden'));
+
+    document.getElementById('btnSetup').addEventListener('click', () => {
+      syncSetupUI();
+      document.getElementById('modalSetup').classList.remove('hidden');
+    });
+    document.getElementById('closeSetup').addEventListener('click', () => document.getElementById('modalSetup').classList.add('hidden'));
+
+    document.querySelectorAll('.variant-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.variant = btn.dataset.variant;
+        syncSetupUI();
+      });
+    });
+
+    document.getElementById('sliderMultiversePlayers').addEventListener('input', (e) => {
+      state.multiversePlayers = parseInt(e.target.value, 10);
+      syncSetupUI();
+    });
+
+    document.querySelectorAll('.opp-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.opponentMode = btn.dataset.opp;
+        syncSetupUI();
+      });
+    });
+
+    document.getElementById('btnJoinCustomRoom').addEventListener('click', () => {
+      joinOnlineCustomRoom(document.getElementById('inputJoinCustomCode').value);
+    });
+
+    document.getElementById('btnStartOnlineMatch').addEventListener('click', startOnlineLobbyMatchNow);
+    document.getElementById('btnLeaveRoom').addEventListener('click', leaveOnlineCustomRoom);
+
+    document.getElementById('btnCopyRoomCode').addEventListener('click', () => {
+      if (!state.online.roomCode) return;
+      const tempInput = document.createElement('input');
+      tempInput.value = state.online.roomCode;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+      showToast(`Copied room code: ${state.online.roomCode}`);
+    });
+
+    document.getElementById('btnApplySetup').addEventListener('click', () => {
+      document.getElementById('modalSetup').classList.add('hidden');
+      startVariantMatch();
+    });
+
+    document.getElementById('btnShatterToggle').addEventListener('click', () => {
+      state.shatterModeActive = !state.shatterModeActive;
+      state.selectedNode = null;
+      updateHUD();
+      if (state.shatterModeActive) {
+        showToast('Shatter active — tap an opponent line to break it');
+      }
+    });
+
+    document.getElementById('btnUndo').addEventListener('click', undoMove);
+    document.getElementById('btnNewGame').addEventListener('click', startVariantMatch);
+    document.getElementById('btnCloseVictory').addEventListener('click', () => document.getElementById('modalVictory').classList.add('hidden'));
+    document.getElementById('btnPlayAgain').addEventListener('click', () => {
+      if (isOnlineCustom()) {
+        resetOnlineCustomMatch();
+      } else {
+        startVariantMatch();
+      }
+    });
+
+    window.addEventListener('load', () => {
+      resizeCanvas();
+      startVariantMatch();
+      requestAnimationFrame(renderLoop);
+    });
+  </script>
+</body>
+</html>
