@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>CONSTELLATIONS — Planar Geometric Strategy</title>
+  <title>CONSTELLATIONS</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -792,25 +792,23 @@
       );
     }
 
-    /**
-     * Checks if segment (a1, a2) intersects segment (b1, b2).
-     * Touching strictly at a shared endpoint is valid and returns false.
-     */
+    function pointToSegmentDist(p, a, b) {
+      const l2 = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
+      if (l2 < 1e-12) return Math.hypot(p.x - a.x, p.y - a.y);
+      const t = Math.max(0, Math.min(1, ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / l2));
+      return Math.hypot(p.x - (a.x + t * (b.x - a.x)), p.y - (a.y + t * (b.y - a.y)));
+    }
+
     function segmentsCross(a1, a2, b1, b2, idxA1, idxA2, idxB1, idxB2) {
       const sharesEndpoint =
         idxA1 === idxB1 || idxA1 === idxB2 || idxA2 === idxB1 || idxA2 === idxB2;
 
       if (sharesEndpoint) {
-        // Only illegal if one segment lies directly on top of the other (collinear overlap)
-        const o1 = orientation(a1, a2, b1);
-        const o2 = orientation(a1, a2, b2);
-        if (o1 === 0 && o2 === 0) {
-          // Check if the non-shared endpoint lies inside the other segment
-          if (idxA1 === idxB1 && (onSegment(a1, b2, a2) || onSegment(b1, a2, b2))) return true;
-          if (idxA1 === idxB2 && (onSegment(a1, b1, a2) || onSegment(b2, a2, b1))) return true;
-          if (idxA2 === idxB1 && (onSegment(a2, b2, a1) || onSegment(b1, a1, b2))) return true;
-          if (idxA2 === idxB2 && (onSegment(a2, b1, a1) || onSegment(b2, a1, b1))) return true;
-        }
+        // Robust collinear overlap check sharing an endpoint
+        if (idxA1 === idxB1 && (pointToSegmentDist(b2, a1, a2) < 0.025 || pointToSegmentDist(a2, b1, b2) < 0.025)) return true;
+        if (idxA1 === idxB2 && (pointToSegmentDist(b1, a1, a2) < 0.025 || pointToSegmentDist(a2, b1, b2) < 0.025)) return true;
+        if (idxA2 === idxB1 && (pointToSegmentDist(b2, a1, a2) < 0.025 || pointToSegmentDist(a1, b1, b2) < 0.025)) return true;
+        if (idxA2 === idxB2 && (pointToSegmentDist(b1, a1, a2) < 0.025 || pointToSegmentDist(a1, b1, b2) < 0.025)) return true;
         return false;
       }
 
@@ -825,6 +823,11 @@
       if (o3 === 0 && onSegment(b1, a1, b2)) return true;
       if (o4 === 0 && onSegment(b1, a2, b2)) return true;
 
+      // Also reject overlapping parallel / collinear segments that don't share endpoints
+      if (Math.abs(orientation(a1, a2, b1)) < EPS && Math.abs(orientation(a1, a2, b2)) < EPS) {
+        if (onSegment(a1, b1, a2) || onSegment(a1, b2, a2) || onSegment(b1, a1, b2) || onSegment(b1, a2, b2)) return true;
+      }
+
       return false;
     }
 
@@ -833,16 +836,16 @@
      */
     function pointInTriangle(p, a, b, c) {
       const areaOrig = Math.abs((b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y));
-      if (areaOrig < EPS) return true; // Degenerate collinear triangle is invalid anyway
+      if (areaOrig < 1e-4) return true; // Reject degenerate flat/collinear triangles
       const area1 = Math.abs((a.x - p.x) * (b.y - p.y) - (b.x - p.x) * (a.y - p.y));
       const area2 = Math.abs((b.x - p.x) * (c.y - p.y) - (c.x - p.x) * (b.y - p.y));
       const area3 = Math.abs((c.x - p.x) * (a.y - p.y) - (a.x - p.x) * (c.y - p.y));
-      return Math.abs(area1 + area2 + area3 - areaOrig) < 1e-5;
+      return Math.abs(area1 + area2 + area3 - areaOrig) < 1e-4;
     }
 
     /**
      * Checks if any node lies strictly on the open segment between i and j.
-     * Prevents drawing a single long edge right through an intermediate dot!
+     * Uses perpendicular distance (1e-4) to catch floating-point collinear dots!
      */
     function segmentPassesThroughNode(nodes, i, j) {
       const a = nodes[i];
@@ -850,7 +853,7 @@
       for (let k = 0; k < nodes.length; k++) {
         if (k === i || k === j) continue;
         const p = nodes[k];
-        if (orientation(a, b, p) === 0 && onSegment(a, p, b)) {
+        if (pointToSegmentDist(p, a, b) < 0.025) {
           return true;
         }
       }
@@ -885,8 +888,8 @@
           const angle = (i / outerCount) * Math.PI * 2 - Math.PI / 2 + Math.PI / outerCount;
           nodes.push({
             id: nodes.length,
-            x: cx + Math.cos(angle) * 0.41,
-            y: cy + Math.sin(angle) * 0.41,
+            x: cx + Math.cos(angle) * 0.42,
+            y: cy + Math.sin(angle) * 0.42,
             anchored: false
           });
         }
@@ -1928,12 +1931,12 @@
     window.addEventListener('resize', resizeCanvas);
 
     function nodeToScreen(node) {
-      const pad = Math.min(canvasW, canvasH) * 0.08;
-      const drawW = canvasW - pad * 2;
-      const drawH = canvasH - pad * 2;
+      const side = Math.min(canvasW, canvasH) * 0.86;
+      const offsetX = (canvasW - side) * 0.5;
+      const offsetY = (canvasH - side) * 0.5;
       return {
-        x: pad + node.x * drawW,
-        y: pad + node.y * drawH
+        x: offsetX + node.x * side,
+        y: offsetY + node.y * side
       };
     }
 
