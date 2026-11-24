@@ -531,7 +531,7 @@
     let currentUser = null;
     let roomUnsubscribe = null;
     let queueUnsubscribe = null;
-    let queueExpandTimer = null;
+    let queuePollTimer = null;
 
     const playerProfile = {
       elo: 1200,
@@ -1359,6 +1359,69 @@
       return doc(db, 'artifacts', appId, 'public', 'data', 'vertex_ranked_queue', uid);
     }
 
+    async function tryClaimRankedOpponent(myRoomCode, searchWindow) {
+      const queueCol = collection(db, 'artifacts', appId, 'public', 'data', 'vertex_ranked_queue');
+      const snap = await getDocs(queueCol);
+      let bestCandidate = null;
+      let bestDiff = Infinity;
+
+      snap.forEach((docSnap) => {
+        const entry = docSnap.data();
+        if (entry.uid === currentUser.uid) return;
+        if (entry.status !== 'waiting') return;
+        // Ignore stale entries older than 65 seconds
+        if (Date.now() - (entry.createdAt || 0) > 65000) return;
+
+        const diff = Math.abs((entry.elo || 1200) - playerProfile.elo);
+        if (diff <= searchWindow && diff < bestDiff) {
+          bestDiff = diff;
+          bestCandidate = entry;
+        }
+      });
+
+      if (!bestCandidate || !bestCandidate.roomCode) return false;
+
+      // Deterministic tie-breaker: if both players are queued simultaneously,
+      // the player with the lexicographically higher UID joins the lower UID's room
+      // so they don't cross-join each other's rooms at the exact same millisecond.
+      if (myRoomCode && currentUser.uid < bestCandidate.uid) {
+        return false;
+      }
+
+      const roomRef = getRoomDocRef(bestCandidate.roomCode);
+      const roomSnap = await getDoc(roomRef);
+      if (!roomSnap.exists() || roomSnap.data().p2Uid) return false;
+
+      await updateDoc(getQueueDocRef(bestCandidate.uid), {
+        status: 'matched',
+        matchedWith: currentUser.uid
+      });
+
+      await updateDoc(roomRef, {
+        p2Uid: currentUser.uid,
+        p2Elo: playerProfile.elo,
+        updatedAt: Date.now()
+      });
+
+      await cancelRankedMatchmaking(true);
+      if (myRoomCode) {
+        try {
+          await deleteDoc(getRoomDocRef(myRoomCode));
+        } catch (e) {}
+      }
+
+      state.mode = 'ranked';
+      state.online.isRanked = true;
+      state.online.roomCode = bestCandidate.roomCode;
+      state.online.myRole = 2;
+      state.online.eloApplied = false;
+
+      document.getElementById('modalSetup').classList.add('hidden');
+      subscribeToOnlineRoom(bestCandidate.roomCode);
+      showToast(`Ranked match found vs ${bestCandidate.elo} Elo!`);
+      return true;
+    }
+
     async function startRankedMatchmaking() {
       if (!db || !currentUser) {
         showToast('Connecting to ranked server...');
@@ -1372,63 +1435,17 @@
       const statusText = document.getElementById('rankedQueueText');
       statusBox.classList.remove('hidden');
 
+      const MAX_WAIT_SEC = 60;
       let searchWindow = 120;
       const startTime = Date.now();
-      statusText.textContent = `Matching near ${playerProfile.elo} Elo (±${searchWindow})...`;
+      statusText.textContent = `Searching (${MAX_WAIT_SEC}s) · ${playerProfile.elo} Elo (±${searchWindow})`;
 
       try {
-        // 1. Scan active queue for best Elo match
-        const queueCol = collection(db, 'artifacts', appId, 'public', 'data', 'vertex_ranked_queue');
-        const snap = await getDocs(queueCol);
-        let bestCandidate = null;
-        let bestDiff = Infinity;
+        // 1. Immediate check before creating a standby room
+        const matchedImmediately = await tryClaimRankedOpponent(null, searchWindow);
+        if (matchedImmediately) return;
 
-        snap.forEach((docSnap) => {
-          const entry = docSnap.data();
-          if (entry.uid === currentUser.uid) return;
-          if (entry.status !== 'waiting') return;
-          // Ignore stale entries older than 90 seconds
-          if (Date.now() - (entry.createdAt || 0) > 90000) return;
-
-          const diff = Math.abs((entry.elo || 1200) - playerProfile.elo);
-          if (diff <= 450 && diff < bestDiff) {
-            bestDiff = diff;
-            bestCandidate = entry;
-          }
-        });
-
-        if (bestCandidate && bestCandidate.roomCode) {
-          // Join candidate's ranked room as Player 2
-          const roomRef = getRoomDocRef(bestCandidate.roomCode);
-          const roomSnap = await getDoc(roomRef);
-          if (roomSnap.exists() && !roomSnap.data().p2Uid) {
-            await updateDoc(getQueueDocRef(bestCandidate.uid), {
-              status: 'matched',
-              matchedWith: currentUser.uid
-            });
-
-            await updateDoc(roomRef, {
-              p2Uid: currentUser.uid,
-              p2Elo: playerProfile.elo,
-              updatedAt: Date.now()
-            });
-
-            state.online.inQueue = false;
-            statusBox.classList.add('hidden');
-            state.mode = 'ranked';
-            state.online.isRanked = true;
-            state.online.roomCode = bestCandidate.roomCode;
-            state.online.myRole = 2;
-            state.online.eloApplied = false;
-
-            document.getElementById('modalSetup').classList.add('hidden');
-            subscribeToOnlineRoom(bestCandidate.roomCode);
-            showToast(`Ranked match found vs ${bestCandidate.elo} Elo!`);
-            return;
-          }
-        }
-
-        // 2. Otherwise create a standardized competitive room (19-node Hexa-Ring) & wait in queue
+        // 2. Create a standardized competitive room (19-node Hexa-Ring) & stay in queue for 60s
         const code = generateRoomCode();
         const nodes = generateConstellation('hexaring', 19, 'RANKED');
 
@@ -1462,18 +1479,11 @@
           createdAt: Date.now()
         });
 
-        // Expand Elo range indicator smoothly over time
-        queueExpandTimer = setInterval(() => {
-          const elapsed = Math.floor((Date.now() - startTime) / 1000);
-          searchWindow = Math.min(500, 120 + elapsed * 15);
-          statusText.textContent = `Matching near ${playerProfile.elo} Elo (±${searchWindow}) · ${elapsed}s`;
-        }, 1000);
-
-        // Listen for opponent joining our room
+        // 3. Listen in real time if another player joins our standby room
         queueUnsubscribe = onSnapshot(getRoomDocRef(code), async (rSnap) => {
           if (!rSnap.exists()) return;
           const rData = rSnap.data();
-          if (rData.p2Uid) {
+          if (rData.p2Uid && state.online.inQueue) {
             await cancelRankedMatchmaking(true);
             state.mode = 'ranked';
             state.online.isRanked = true;
@@ -1486,6 +1496,27 @@
             showToast(`Ranked match found vs ${rData.p2Elo || 1200} Elo!`);
           }
         });
+
+        // 4. Continuously poll the queue every 2.5s for up to 60 seconds with widening Elo tolerance
+        queuePollTimer = setInterval(async () => {
+          if (!state.online.inQueue) return;
+
+          const elapsed = Math.floor((Date.now() - startTime) / 1000);
+          const remaining = Math.max(0, MAX_WAIT_SEC - elapsed);
+          searchWindow = Math.min(800, 120 + elapsed * 12);
+          statusText.textContent = `Searching (${remaining}s) · ±${searchWindow} Elo`;
+
+          if (elapsed >= MAX_WAIT_SEC) {
+            await cancelRankedMatchmaking(true);
+            try {
+              await deleteDoc(getRoomDocRef(code));
+            } catch (e) {}
+            showToast('No ranked opponent found within 60s.');
+            return;
+          }
+
+          await tryClaimRankedOpponent(code, searchWindow);
+        }, 2500);
       } catch (err) {
         console.error('Ranked matchmaking error:', err);
         showToast('Matchmaking error — please retry.');
@@ -1495,9 +1526,9 @@
 
     async function cancelRankedMatchmaking(silent = false) {
       state.online.inQueue = false;
-      if (queueExpandTimer) {
-        clearInterval(queueExpandTimer);
-        queueExpandTimer = null;
+      if (queuePollTimer) {
+        clearInterval(queuePollTimer);
+        queuePollTimer = null;
       }
       if (queueUnsubscribe) {
         queueUnsubscribe();
