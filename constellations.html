@@ -169,20 +169,16 @@
 
       <!-- Minimal Utility Controls -->
       <div class="flex items-center gap-1.5">
-        <button id="btnTheme" title="Toggle Light/Dark Theme" class="btn-flat px-2.5 py-1 rounded text-[11px] font-mono-tech text-sub hover:text-main">
-          Light
-        </button>
-
-        <button id="btnSound" title="Toggle Sound" class="btn-flat px-2.5 py-1 rounded text-[11px] font-mono-tech text-sub hover:text-main">
-          Audio: On
-        </button>
+        <a href="custom.html" class="btn-flat px-2.5 py-1 rounded text-[11px] font-mono-tech text-sub hover:text-main">
+          Custom Modes
+        </a>
 
         <button id="btnRules" class="btn-flat px-2.5 py-1 rounded text-[11px] font-mono-tech text-sub hover:text-main">
           Rules
         </button>
 
         <button id="btnSetup" class="btn-flat px-2.5 py-1 rounded text-[11px] font-mono-tech text-main">
-          Mode
+          Play &amp; Settings
         </button>
       </div>
     </div>
@@ -286,49 +282,87 @@
   </footer>
 
   <!-- MODAL 1: Rules -->
-  <div id="modalRules" class="hidden fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4">
-    <div class="surface-panel max-w-sm w-full rounded p-5">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="font-mono-tech text-xs font-semibold uppercase tracking-widest text-main">Rules</h2>
-        <button id="closeRules" class="text-sub hover:text-main text-xs font-mono-tech">✕</button>
+  <div id="modalRules" class="hidden fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4 overflow-y-auto">
+    <div class="surface-panel max-w-md w-full rounded p-5 my-auto space-y-4">
+      <div class="flex items-center justify-between border-b border-[var(--border-hairline)] pb-3">
+        <div>
+          <h2 class="font-mono-tech text-xs font-semibold uppercase tracking-widest text-main">How To Play</h2>
+          <p class="text-[11px] text-dim mt-0.5">Objective: Score the most triangles before the board locks.</p>
+        </div>
+        <button id="closeRules" class="text-sub hover:text-main text-xs font-mono-tech p-1">✕</button>
       </div>
 
-      <div class="space-y-3 text-xs text-sub leading-relaxed">
-        <div>
-          <span class="font-medium text-main">1. Non-Crossing Lines:</span> Connect any two open dots. Lines cannot cross existing lines.
-        </div>
-        <div>
-          <span class="font-medium text-main">2. Empty Triangles:</span> Close an empty triangle (no dots inside) to score <span class="text-main">+1</span> and take an immediate bonus turn. Enclosed dots lock permanently.
-        </div>
-        <div>
-          <span class="font-medium text-main">3. Pie Rule:</span> On Turn 2, Player 2 may swap sides to claim Player 1's opening line.
+      <!-- Section 1: Core Turn Flow -->
+      <div class="space-y-2">
+        <div class="font-mono-tech text-[10px] uppercase tracking-wider text-dim">Turn Sequence</div>
+        <div class="surface-elevated rounded p-3 space-y-2 text-xs text-sub leading-relaxed">
+          <div class="flex items-start gap-2.5">
+            <span class="font-mono-tech text-[11px] text-main font-semibold">01</span>
+            <span><strong class="text-main font-medium">Draw a Line:</strong> Tap or drag between two open dots to connect them.</span>
+          </div>
+          <div class="flex items-start gap-2.5">
+            <span class="font-mono-tech text-[11px] text-main font-semibold">02</span>
+            <span><strong class="text-main font-medium">Claim &amp; Chain:</strong> Closing an <strong class="text-main font-medium">empty triangle</strong> scores <span class="font-mono-tech text-main">+1</span> and grants an immediate <strong class="text-main font-medium">bonus turn</strong>.</span>
+          </div>
+          <div class="flex items-start gap-2.5">
+            <span class="font-mono-tech text-[11px] text-main font-semibold">03</span>
+            <span><strong class="text-main font-medium">Pie Rule (Turn 2):</strong> Player 2 may swap sides on Turn 2 to claim Player 1's opening line.</span>
+          </div>
         </div>
       </div>
 
-      <button id="btnRulesGotIt" class="mt-5 w-full btn-solid py-2 rounded text-xs font-mono-tech">
-        Close
+      <!-- Section 2: Allowed vs Not Allowed -->
+      <div class="grid grid-cols-2 gap-2.5">
+        <div class="surface-elevated rounded p-3 space-y-1.5">
+          <div class="font-mono-tech text-[10px] uppercase tracking-wider text-main flex items-center gap-1.5">
+            <span>✓</span> Allowed
+          </div>
+          <ul class="text-[11px] text-sub space-y-1.5 leading-snug">
+            <li>• Sharing endpoints with existing lines</li>
+            <li>• Connecting any two unanchored dots</li>
+            <li>• Chaining multiple bonus turns in a row</li>
+          </ul>
+        </div>
+
+        <div class="surface-elevated rounded p-3 space-y-1.5">
+          <div class="font-mono-tech text-[10px] uppercase tracking-wider p2-text flex items-center gap-1.5">
+            <span>✕</span> Not Allowed
+          </div>
+          <ul class="text-[11px] text-sub space-y-1.5 leading-snug">
+            <li>• Crossing over any existing line</li>
+            <li>• Passing a line through a 3rd dot</li>
+            <li>• Scoring a triangle with a dot inside it</li>
+            <li>• Connecting to gray locked (anchored) dots</li>
+          </ul>
+        </div>
+      </div>
+
+      <button id="btnRulesGotIt" class="w-full btn-solid py-2 rounded text-xs font-mono-tech">
+        Got It
       </button>
     </div>
   </div>
 
-  <!-- MODAL 2: Mode & Ranked Matchmaking -->
+  <!-- MODAL 2: Play, Modes & Settings -->
   <div id="modalSetup" class="hidden fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4 overflow-y-auto">
-    <div class="surface-panel max-w-sm w-full rounded p-5 my-auto">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="font-mono-tech text-xs font-semibold uppercase tracking-widest text-main">Mode &amp; Ranked</h2>
-        <button id="closeSetup" class="text-sub hover:text-main text-xs font-mono-tech">✕</button>
+    <div class="surface-panel max-w-md w-full rounded p-5 my-auto space-y-4">
+      <div class="flex items-center justify-between border-b border-[var(--border-hairline)] pb-3">
+        <h2 class="font-mono-tech text-xs font-semibold uppercase tracking-widest text-main">Play &amp; Settings</h2>
+        <button id="closeSetup" class="text-sub hover:text-main text-xs font-mono-tech p-1">✕</button>
       </div>
 
-      <div class="space-y-4">
-        <div>
-          <label class="block font-mono-tech text-[10px] uppercase tracking-wider text-dim mb-1.5">Mode</label>
-          <div class="grid grid-cols-5 gap-1" id="modeSelector">
-            <button data-mode="ranked" class="mode-btn btn-flat py-1.5 px-1 rounded text-[11px] font-mono-tech text-center">Ranked</button>
-            <button data-mode="online" class="mode-btn btn-flat py-1.5 px-1 rounded text-[11px] font-mono-tech text-center">Room</button>
-            <button data-mode="pvp" class="mode-btn btn-flat py-1.5 px-1 rounded text-[11px] font-mono-tech text-center">1v1</button>
-            <button data-mode="ai-easy" class="mode-btn btn-flat py-1.5 px-1 rounded text-[11px] font-mono-tech text-center">Easy</button>
-            <button data-mode="ai-tactical" class="mode-btn btn-flat py-1.5 px-1 rounded text-[11px] font-mono-tech text-center">Hard</button>
-          </div>
+      <!-- Group 1: Game Mode -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <label class="font-mono-tech text-[10px] uppercase tracking-wider text-dim">1. Select Mode</label>
+          <span id="modeDescriptionTag" class="font-mono-tech text-[10px] text-sub">Competitive Elo</span>
+        </div>
+        <div class="grid grid-cols-5 gap-1" id="modeSelector">
+          <button data-mode="ranked" class="mode-btn btn-flat py-1.5 px-1 rounded text-[11px] font-mono-tech text-center">Ranked</button>
+          <button data-mode="online" class="mode-btn btn-flat py-1.5 px-1 rounded text-[11px] font-mono-tech text-center">Room</button>
+          <button data-mode="pvp" class="mode-btn btn-flat py-1.5 px-1 rounded text-[11px] font-mono-tech text-center">1v1</button>
+          <button data-mode="ai-easy" class="mode-btn btn-flat py-1.5 px-1 rounded text-[11px] font-mono-tech text-center">Easy</button>
+          <button data-mode="ai-tactical" class="mode-btn btn-flat py-1.5 px-1 rounded text-[11px] font-mono-tech text-center">Hard</button>
         </div>
 
         <!-- Ranked Panel -->
@@ -336,7 +370,7 @@
           <div class="flex items-center justify-between">
             <div>
               <div class="text-xs font-medium text-main">Ranked Matchmaking</div>
-              <div class="text-[10px] font-mono-tech text-dim">Closest Elo · Hints off</div>
+              <div class="text-[10px] font-mono-tech text-dim">Standard 19-node Hexa · Hints &amp; Undo off</div>
             </div>
             <div class="text-right font-mono-tech">
               <div id="rankedModalElo" class="text-xs font-semibold text-main">1200</div>
@@ -360,54 +394,67 @@
         <!-- Private Room Panel -->
         <div id="onlineSetupSection" class="hidden p-3 rounded surface-elevated space-y-2.5">
           <div class="flex items-center justify-between text-[11px] font-mono-tech">
-            <span class="text-main">Private Room</span>
+            <span class="text-main">Private Friend Room</span>
             <span id="onlineAuthStatus" class="text-dim">Connecting...</span>
           </div>
 
           <div class="flex gap-1.5">
-            <input id="inputJoinCode" type="text" maxlength="6" placeholder="CODE" class="flex-1 surface-panel rounded px-2.5 py-1 text-xs font-mono-tech uppercase tracking-widest text-main focus:outline-none" />
-            <button id="btnJoinRoom" class="btn-flat px-3 py-1 rounded text-xs font-mono-tech text-main">
-              Join
+            <input id="inputJoinCode" type="text" maxlength="6" placeholder="ENTER CODE" class="flex-1 surface-panel rounded px-2.5 py-1.5 text-xs font-mono-tech uppercase tracking-widest text-main focus:outline-none" />
+            <button id="btnJoinRoom" class="btn-flat px-3 py-1.5 rounded text-xs font-mono-tech text-main">
+              Join Room
             </button>
           </div>
 
           <div class="text-[10px] font-mono-tech text-dim flex items-center justify-between pt-1.5 border-t border-[var(--border-hairline)]">
-            <span>ID</span>
+            <span>Player ID</span>
             <span id="displayUserId" class="truncate max-w-[200px]">--</span>
-          </div>
-        </div>
-
-        <!-- Board Layout -->
-        <div id="arenaConfigWrapper" class="space-y-3.5">
-          <div>
-            <label class="block font-mono-tech text-[10px] uppercase tracking-wider text-dim mb-1.5">Layout</label>
-            <div class="grid grid-cols-3 gap-1.5" id="presetSelector">
-              <button data-preset="hexaring" class="preset-btn btn-flat py-1.5 px-2 rounded text-[11px] font-mono-tech text-center">Hexa</button>
-              <button data-preset="starburst" class="preset-btn btn-flat py-1.5 px-2 rounded text-[11px] font-mono-tech text-center">Star</button>
-              <button data-preset="random" class="preset-btn btn-flat py-1.5 px-2 rounded text-[11px] font-mono-tech text-center">Seed</button>
-            </div>
-          </div>
-
-          <div id="seedControlRow" class="hidden">
-            <label class="block font-mono-tech text-[10px] uppercase tracking-wider text-dim mb-1">Seed</label>
-            <div class="flex gap-1.5">
-              <input id="inputSeed" type="text" maxlength="16" placeholder="ORION-7" class="flex-1 surface-elevated rounded px-2.5 py-1 text-xs font-mono-tech text-main focus:outline-none" />
-              <button id="btnRollSeed" class="btn-flat px-2.5 py-1 rounded text-[11px] font-mono-tech text-sub">Roll</button>
-            </div>
-          </div>
-
-          <div>
-            <div class="flex justify-between items-center mb-1.5">
-              <label class="font-mono-tech text-[10px] uppercase tracking-wider text-dim">Nodes</label>
-              <span id="sliderNodeVal" class="font-mono-tech text-[11px] text-main">19</span>
-            </div>
-            <input id="sliderNodes" type="range" min="12" max="28" value="19" class="w-full" />
           </div>
         </div>
       </div>
 
-      <button id="btnApplySetup" class="mt-5 w-full btn-solid py-2 rounded text-xs font-mono-tech">
-        Start
+      <!-- Group 2: Board Layout (Hidden in Ranked) -->
+      <div id="arenaConfigWrapper" class="space-y-3 pt-2 border-t border-[var(--border-hairline)]">
+        <label class="block font-mono-tech text-[10px] uppercase tracking-wider text-dim">2. Arena Configuration</label>
+        <div class="grid grid-cols-3 gap-1.5" id="presetSelector">
+          <button data-preset="hexaring" class="preset-btn btn-flat py-1.5 px-2 rounded text-[11px] font-mono-tech text-center">Hexa-Ring</button>
+          <button data-preset="starburst" class="preset-btn btn-flat py-1.5 px-2 rounded text-[11px] font-mono-tech text-center">Starburst</button>
+          <button data-preset="random" class="preset-btn btn-flat py-1.5 px-2 rounded text-[11px] font-mono-tech text-center">Seeded</button>
+        </div>
+
+        <div id="seedControlRow" class="hidden">
+          <div class="flex gap-1.5">
+            <input id="inputSeed" type="text" maxlength="16" placeholder="ORION-7" class="flex-1 surface-elevated rounded px-2.5 py-1 text-xs font-mono-tech text-main focus:outline-none" />
+            <button id="btnRollSeed" class="btn-flat px-2.5 py-1 rounded text-[11px] font-mono-tech text-sub">Roll Seed</button>
+          </div>
+        </div>
+
+        <div class="surface-elevated rounded px-3 py-2">
+          <div class="flex justify-between items-center mb-1.5">
+            <span class="font-mono-tech text-[10px] uppercase tracking-wider text-dim">Node Density</span>
+            <span id="sliderNodeVal" class="font-mono-tech text-[11px] text-main">19 nodes</span>
+          </div>
+          <input id="sliderNodes" type="range" min="12" max="28" value="19" class="w-full" />
+        </div>
+      </div>
+
+      <!-- Group 3: Preferences (Theme & Audio) -->
+      <div class="space-y-2 pt-2 border-t border-[var(--border-hairline)]">
+        <label class="block font-mono-tech text-[10px] uppercase tracking-wider text-dim">3. Preferences</label>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="btnTheme" type="button" class="btn-flat px-3 py-2 rounded text-[11px] font-mono-tech flex items-center justify-between">
+            <span class="text-sub">Theme</span>
+            <span id="themeValueLabel" class="text-main">Dark</span>
+          </button>
+
+          <button id="btnSound" type="button" class="btn-flat px-3 py-2 rounded text-[11px] font-mono-tech flex items-center justify-between">
+            <span class="text-sub">Audio</span>
+            <span id="soundValueLabel" class="text-main">On</span>
+          </button>
+        </div>
+      </div>
+
+      <button id="btnApplySetup" class="w-full btn-solid py-2.5 rounded text-xs font-mono-tech">
+        Start Match
       </button>
     </div>
   </div>
@@ -504,7 +551,7 @@
     function toggleTheme() {
       isLightTheme = !isLightTheme;
       document.documentElement.classList.toggle('light', isLightTheme);
-      document.getElementById('btnTheme').textContent = isLightTheme ? 'Dark' : 'Light';
+      document.getElementById('themeValueLabel').textContent = isLightTheme ? 'Light' : 'Dark';
     }
 
     // =========================================================================
@@ -1519,7 +1566,10 @@
         }, 2500);
       } catch (err) {
         console.error('Ranked matchmaking error:', err);
-        showToast('Matchmaking error — please retry.');
+        const msg = (err && err.code === 'permission-denied')
+          ? 'Firestore rules blocked queue — update rules'
+          : (err && err.message) ? err.message : 'Matchmaking error — please retry.';
+        showToast(msg);
         await cancelRankedMatchmaking(true);
       }
     }
@@ -2360,6 +2410,16 @@
       const onlineSection = document.getElementById('onlineSetupSection');
       const arenaWrapper = document.getElementById('arenaConfigWrapper');
       const applyBtn = document.getElementById('btnApplySetup');
+      const modeDesc = document.getElementById('modeDescriptionTag');
+
+      const modeDescriptions = {
+        'ranked': 'Competitive Elo · 19n Hexa',
+        'online': 'Shareable Room Code',
+        'pvp': 'Local Pass & Play',
+        'ai-easy': 'Casual Bot',
+        'ai-tactical': 'Lookahead Tactical Bot'
+      };
+      modeDesc.textContent = modeDescriptions[state.mode] || '';
 
       rankedSection.classList.add('hidden');
       onlineSection.classList.add('hidden');
@@ -2374,7 +2434,7 @@
         onlineSection.classList.remove('hidden');
         applyBtn.textContent = 'Create Private Room';
       } else {
-        applyBtn.textContent = 'Launch Constellation';
+        applyBtn.textContent = 'Start Match';
       }
 
       const seedRow = document.getElementById('seedControlRow');
@@ -2386,7 +2446,7 @@
       }
 
       document.getElementById('sliderNodes').value = state.nodeCount;
-      document.getElementById('sliderNodeVal').textContent = state.nodeCount;
+      document.getElementById('sliderNodeVal').textContent = `${state.nodeCount} nodes`;
     }
 
     function startNewGame() {
@@ -2430,7 +2490,7 @@
 
     document.getElementById('btnSound').addEventListener('click', () => {
       SoundFX.enabled = !SoundFX.enabled;
-      document.getElementById('btnSound').textContent = SoundFX.enabled ? 'Audio: On' : 'Audio: Off';
+      document.getElementById('soundValueLabel').textContent = SoundFX.enabled ? 'On' : 'Off';
       if (SoundFX.enabled) SoundFX.playSelect();
     });
 
@@ -2492,7 +2552,7 @@
 
     document.getElementById('sliderNodes').addEventListener('input', (e) => {
       state.nodeCount = parseInt(e.target.value, 10);
-      document.getElementById('sliderNodeVal').textContent = state.nodeCount;
+      document.getElementById('sliderNodeVal').textContent = `${state.nodeCount} nodes`;
     });
 
     document.getElementById('btnRollSeed').addEventListener('click', () => {
